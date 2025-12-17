@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TRANG CHỦ NHÂN VIÊN</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0078d4">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<link rel="apple-touch-icon" href="https://img.icons8.com/fluency/192/business-building.png">
+
+<link rel="icon" href="https://img.icons8.com/fluency/192/business-building.png">
+
+<style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; }
+    
+    /* Header đẹp */
+    .app-header { 
+        background: linear-gradient(135deg, #0078d4, #005a9e); 
+        color: white; padding: 20px; padding-top: 50px; 
+        text-align: left; font-weight: bold; font-size: 22px; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+        border-radius: 0 0 25px 25px;
+        margin-bottom: 10px;
+    }
+    .app-header p { margin: 5px 0 0; font-size: 14px; opacity: 0.8; font-weight: normal; }
+
+    /* Lưới menu */
+    .container { padding: 20px; flex: 1; }
+    .menu-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+    
+    /* Thiết kế nút bấm (Card) */
+    .menu-card { 
+        background: white; padding: 20px; border-radius: 16px; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+        display: flex; align-items: center; gap: 20px; 
+        cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; 
+        text-decoration: none; color: inherit; /* Để thẻ a không bị gạch chân */
+    }
+    .menu-card:active { transform: scale(0.96); background: #fafafa; }
+    
+    /* Icon hộp vuông */
+    .icon-box { 
+        width: 60px; height: 60px; border-radius: 14px; 
+        display: flex; align-items: center; justify-content: center; 
+        font-size: 26px; color: white; box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .card-text h3 { margin: 0; font-size: 17px; color: #333; }
+    .card-text p { margin: 4px 0 0; font-size: 13px; color: #888; }
+
+    /* Màu sắc riêng cho từng nút */
+    .bg-date { background: linear-gradient(135deg, #FF9800, #F57C00); }   /* Cam */
+    .bg-stock { background: linear-gradient(135deg, #2196F3, #1976D2); }  /* Xanh dương */
+    .bg-leave { background: linear-gradient(135deg, #4CAF50, #388E3C); }  /* Xanh lá */
+
+    /* Footer nhỏ */
+    .footer { text-align: center; padding: 20px; color: #aaa; font-size: 12px; }
+
+    /* CSS Banner cài đặt (Giữ nguyên từ code trước) */
+    #install-banner { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 20px; box-shadow: 0 -4px 20px rgba(0,0,0,0.15); z-index: 99999; border-radius: 20px 20px 0 0; animation: slideUp 0.4s ease-out; }
+    .inst-content { display: flex; align-items: center; gap: 15px; }
+    .inst-icon { min-width: 50px; height: 50px; background: #0078d4; border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px; }
+    .inst-text h4 { margin: 0 0 5px; color: #333; font-size: 16px; }
+    .inst-text p { margin: 0; font-size: 14px; color: #666; }
+    .btn-close-inst { position: absolute; top: 10px; right: 10px; border: none; background: #f0f2f5; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+    <div class="app-header">
+        Xin chào! 👋
+        <p>Chọn chức năng bạn cần sử dụng</p>
+    </div>
+
+    <div class="container">
+        <div class="menu-grid">
+            
+            <a href="#" id="linkDate" class="menu-card">
+                <div class="icon-box bg-date"><i class="fas fa-calendar-day"></i></div>
+                <div class="card-text">
+                    <h3>Tính Hạn Sử Dụng</h3>
+                    <p>Công cụ tính date nhanh</p>
+                </div>
+            </a>
+
+            <a href="#" id="linkStock" class="menu-card">
+                <div class="icon-box bg-stock"><i class="fas fa-box-open"></i></div>
+                <div class="card-text">
+                    <h3>Tra Cứu mẫu tủ</h3>
+                    <p>Xem mẫu & hình ảnh tủ</p>
+                </div>
+            </a>
+
+            <a href="#" id="linkEmployee" class="menu-card">
+                <div class="icon-box bg-leave"><i class="fas fa-user-clock"></i></div>
+                <div class="card-text">
+                    <h3>Phép & bù</h3>
+                    <p>Đăng ký nghỉ, xem phép/bù</p>
+                </div>
+            </a>
+
+        </div>
+    </div>
+
+    <div class="footer">
+        CỔNG THÔNG TIN NỘI BỘ
+    </div>
+
+    <div id="install-banner">
+        <button class="btn-close-inst" onclick="closeBanner()">×</button>
+        <div class="inst-content">
+            <div class="inst-icon">App</div>
+            <div class="inst-text" id="inst-guide-text"></div>
+        </div>
+    </div>
+
+<script>
+    // ==========================================
+    // ⚙️ CẤU HÌNH ĐƯỜNG LINK CỦA BẠN TẠI ĐÂY
+    // ==========================================
+    
+    // 1. Link công cụ tính Date (Nếu chưa có thì để dấu #)
+    const URL_DATE = "https://bathinh008.github.io/tinhhsd/"; 
+    
+    // 2. Link xem tồn kho (Google Sheet hoặc Web App)
+    const URL_STOCK = "https://bathinh008.github.io/tonkho/"; 
+    
+    // 3. Link file Phép bù (Là link của file employee.html bạn đã up lên mạng)
+    const URL_EMPLOYEE = "https://bathinh008.github.io/LLVNV/"; 
+
+    // ==========================================
+
+    // Gán link vào nút
+    document.getElementById("linkDate").href = URL_DATE;
+    document.getElementById("linkStock").href = URL_STOCK;
+    document.getElementById("linkEmployee").href = URL_EMPLOYEE;
+
+    // --- LOGIC BANNER CÀI ĐẶT (GIỮ NGUYÊN) ---
+    function checkInstallation() {
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        if (isStandalone || localStorage.getItem("dismissedInstallBanner") === "true") return;
+
+        const ua = navigator.userAgent;
+        const banner = document.getElementById("install-banner");
+        const guide = document.getElementById("inst-guide-text");
+        let show = false;
+
+        if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) {
+            guide.innerHTML = `<h4>Cài App Trang Chủ</h4><p>Bấm nút <b>Chia sẻ</b> <i class="fas fa-share-square"></i> và chọn <b>"Thêm vào MH chính"</b>.</p>`;
+            show = true;
+        } else if (/android/i.test(ua)) {
+            guide.innerHTML = `<h4>Cài App Trang Chủ</h4><p>Bấm dấu <b>3 chấm</b> <i class="fas fa-ellipsis-v"></i> và chọn <b>"Thêm vào MH chính"</b>.</p>`;
+            show = true;
+        }
+
+        if (show) setTimeout(() => banner.style.display = "block", 2000);
+    }
+    function closeBanner() {
+        document.getElementById("install-banner").style.display = "none";
+        localStorage.setItem("dismissedInstallBanner", "true");
+    }
+    checkInstallation();
+</script>
+
+</body>
+</html>
