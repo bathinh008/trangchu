@@ -68,6 +68,15 @@
     .inst-text p { margin: 0; font-size: 14px; color: #666; }
     .btn-close-inst { position: absolute; top: 10px; right: 10px; border: none; background: #f0f2f5; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; }
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+	
+	/* Class mới cho ảnh Icon trong banner */
+	.inst-icon-img {
+		width: 60px;
+		height: 60px;
+		border-radius: 14px; /* Bo góc mềm mại giống iOS */
+		box-shadow: 0 4px 10px rgba(0,0,0,0.15); /* Đổ bóng nhẹ cho nổi */
+		object-fit: contain; /* Đảm bảo ảnh không bị méo */
+	}
 </style>
 </head>
 <body>
@@ -99,7 +108,7 @@
             <a href="#" id="linkEmployee" class="menu-card">
                 <div class="icon-box bg-leave"><i class="fas fa-user-clock"></i></div>
                 <div class="card-text">
-                    <h3>Phép & bù</h3>
+                    <h3>Xem phép & bù</h3>
                     <p>Đăng ký nghỉ, xem phép/bù</p>
                 </div>
             </a>
@@ -114,7 +123,8 @@
     <div id="install-banner">
         <button class="btn-close-inst" onclick="closeBanner()">×</button>
         <div class="inst-content">
-            <div class="inst-icon">App</div>
+            <!--<div class="inst-icon">App</div> -->
+			<img src="https://img.icons8.com/fluency/512/skyscrapers.png" class="inst-icon-img">
             <div class="inst-text" id="inst-guide-text"></div>
         </div>
     </div>
@@ -151,10 +161,10 @@
         let show = false;
 
         if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) {
-            guide.innerHTML = `<h4>Cài App Trang Chủ</h4><p>Bấm nút <b>Chia sẻ</b> <i class="fas fa-share-square"></i> và chọn <b>"Thêm vào MH chính"</b>.</p>`;
+            guide.innerHTML = `<h4>Cài App</h4><p>Bấm nút <b>Chia sẻ</b> <i class="fas fa-share-square"></i> và chọn <b>"Thêm vào MH chính"</b>.</p>`;
             show = true;
         } else if (/android/i.test(ua)) {
-            guide.innerHTML = `<h4>Cài App Trang Chủ</h4><p>Bấm dấu <b>3 chấm</b> <i class="fas fa-ellipsis-v"></i> và chọn <b>"Thêm vào MH chính"</b>.</p>`;
+            guide.innerHTML = `<h4>Cài App</h4><p>Bấm dấu <b>3 chấm</b> <i class="fas fa-ellipsis-v"></i> và chọn <b>"Thêm vào MH chính"</b>.</p>`;
             show = true;
         }
 
