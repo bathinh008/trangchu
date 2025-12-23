@@ -4,178 +4,300 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TRANG CHỦ NHÂN VIÊN</title>
-
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0078d4">
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
-<link rel="apple-touch-icon" href="https://img.icons8.com/fluency/512/skyscrapers.png">
-<link rel="icon" href="https://img.icons8.com/fluency/512/skyscrapers.png">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; }
+    body { font-family: 'Be Vietnam Pro', sans-serif; background: #f0f2f5; margin: 0; padding: 0; min-height: 100vh; display: flex; flex-direction: column; }
     
-    /* Header đẹp */
+    /* Header */
     .app-header { 
         background: linear-gradient(135deg, #0078d4, #005a9e); 
         color: white; padding: 20px; padding-top: 50px; 
-        text-align: left; font-weight: bold; font-size: 22px; 
         box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
-        border-radius: 0 0 25px 25px;
-        margin-bottom: 10px;
+        border-radius: 0 0 25px 25px; margin-bottom: 10px;
     }
-    .app-header p { margin: 5px 0 0; font-size: 14px; opacity: 0.8; font-weight: normal; }
+    .app-header h2 { margin: 0; font-size: 22px; }
+    .app-header p { margin: 5px 0 0; font-size: 14px; opacity: 0.9; }
 
-    /* Lưới menu */
-    .container { padding: 20px; flex: 1; }
-    .menu-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+    /* Container */
+    .container { padding: 20px; flex: 1; padding-bottom: 80px; display: none; /* Ẩn mặc định chờ load */ }
+    .section-title { font-size: 13px; color: #666; margin: 20px 0 10px 5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .menu-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
     
-    /* Thiết kế nút bấm (Card) */
+    /* Card Design */
     .menu-card { 
-        background: white; padding: 20px; border-radius: 16px; 
+        background: white; padding: 15px 20px; border-radius: 16px; 
         box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
-        display: flex; align-items: center; gap: 20px; 
-        cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; 
-        text-decoration: none; color: inherit; /* Để thẻ a không bị gạch chân */
+        display: flex; align-items: center; gap: 15px; 
+        cursor: pointer; transition: all 0.2s; 
+        text-decoration: none; color: inherit; position: relative; overflow: hidden;
     }
-    .menu-card:active { transform: scale(0.96); background: #fafafa; }
+    .menu-card:active { transform: scale(0.98); background: #fafafa; }
+    .hidden-item { display: none !important; }
+    .menu-card.disabled { opacity: 0.6; pointer-events: none; filter: grayscale(100%); }
+
+    /* Icons & Colors */
+    .icon-box { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; color: white; box-shadow: 0 4px 8px rgba(0,0,0,0.15); flex-shrink: 0; }
+    .card-text h3 { margin: 0; font-size: 16px; color: #333; font-weight: 600; }
+    .card-text p { margin: 2px 0 0; font-size: 13px; color: #888; }
     
-    /* Icon hộp vuông */
-    .icon-box { 
-        width: 60px; height: 60px; border-radius: 14px; 
-        display: flex; align-items: center; justify-content: center; 
-        font-size: 26px; color: white; box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    }
-    
-    .card-text h3 { margin: 0; font-size: 17px; color: #333; }
-    .card-text p { margin: 4px 0 0; font-size: 13px; color: #888; }
+    .bg-date { background: linear-gradient(135deg, #FF9800, #F57C00); }
+    .bg-stock { background: linear-gradient(135deg, #2196F3, #1976D2); }
+    .bg-leave { background: linear-gradient(135deg, #4CAF50, #388E3C); }
+    .bg-admin { background: linear-gradient(135deg, #673AB7, #512DA8); }
+    .bg-wheel { background: linear-gradient(135deg, #E91E63, #C2185B); }
+    .bg-lucky { background: linear-gradient(135deg, #FFC107, #FFB300); }
 
-    /* Màu sắc riêng cho từng nút */
-    .bg-date { background: linear-gradient(135deg, #FF9800, #F57C00); }   /* Cam */
-    .bg-stock { background: linear-gradient(135deg, #2196F3, #1976D2); }  /* Xanh dương */
-    .bg-leave { background: linear-gradient(135deg, #4CAF50, #388E3C); }  /* Xanh lá */
+    /* Badge & Footer */
+    .status-badge { font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 10px; position: absolute; top: 10px; right: 10px; text-transform: uppercase; }
+    .badge-live { background: #ffebee; color: #d32f2f; animation: pulse 2s infinite; }
+    .badge-soon { background: #e3f2fd; color: #1976d2; }
+    .badge-ended { background: #f5f5f5; color: #757575; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+    .footer { text-align: center; padding: 20px; color: #aaa; font-size: 12px; margin-top: auto; }
 
-    /* Footer nhỏ */
-    .footer { text-align: center; padding: 20px; color: #aaa; font-size: 12px; }
-
-    /* CSS Banner cài đặt (Giữ nguyên từ code trước) */
-    #install-banner { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 20px; box-shadow: 0 -4px 20px rgba(0,0,0,0.15); z-index: 99999; border-radius: 20px 20px 0 0; animation: slideUp 0.4s ease-out; }
-    .inst-content { display: flex; align-items: center; gap: 15px; }
-    .inst-icon { min-width: 50px; height: 50px; background: #0078d4; border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px; }
-    .inst-text h4 { margin: 0 0 5px; color: #333; font-size: 16px; }
-    .inst-text p { margin: 0; font-size: 14px; color: #666; }
-    .btn-close-inst { position: absolute; top: 10px; right: 10px; border: none; background: #f0f2f5; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; }
-    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    /* Màn hình Loading */
+    #loading-screen { position: fixed; inset: 0; background: #f0f2f5; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; }
+    .spinner { width: 40px; height: 40px; border: 4px solid #ddd; border-top-color: #0078d4; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 	
-	/* Class mới cho ảnh Icon trong banner */
-	.inst-icon-img {
-		width: 60px;
-		height: 60px;
-		border-radius: 14px; /* Bo góc mềm mại giống iOS */
-		box-shadow: 0 4px 10px rgba(0,0,0,0.15); /* Đổ bóng nhẹ cho nổi */
-		object-fit: contain; /* Đảm bảo ảnh không bị méo */
+	/* Thêm font đơn cách (monospace) cho số để không bị giật khi số chạy */
+	.status-badge { 
+		font-size: 11px; font-weight: bold; padding: 4px 8px; border-radius: 10px; 
+		position: absolute; top: 10px; right: 10px; text-transform: uppercase;
+		font-variant-numeric: tabular-nums; /* Giúp số thẳng hàng */
+		letter-spacing: 0.5px;
+		z-index: 2;
 	}
 </style>
 </head>
 <body>
 
+    <div id="loading-screen">
+        <div class="spinner"></div>
+        <p style="color: #666; font-size: 14px;">Đang tải dữ liệu...</p>
+    </div>
+
     <div class="app-header">
-        Xin chào! 👋
-        <p>Chọn chức năng bạn cần sử dụng</p>
+        <h2>Xin chào! 👋</h2>
+        <p>Cổng thông tin & Tiện ích nhân viên</p>
     </div>
 
-    <div class="container">
+    <div class="container" id="main-content">
+        
+        <div class="section-title">Công cụ làm việc</div>
         <div class="menu-grid">
-            
-            <a href="#" id="linkDate" class="menu-card">
-                <div class="icon-box bg-date"><i class="fas fa-calendar-day"></i></div>
-                <div class="card-text">
-                    <h3>Tính Hạn Sử Dụng</h3>
-                    <p>Công cụ tính date nhanh</p>
-                </div>
-            </a>
-
-            <a href="#" id="linkStock" class="menu-card">
-                <div class="icon-box bg-stock"><i class="fas fa-box-open"></i></div>
-                <div class="card-text">
-                    <h3>Tra Cứu mẫu tủ</h3>
-                    <p>Xem mẫu & hình ảnh tủ</p>
-                </div>
-            </a>
-
-            <a href="#" id="linkEmployee" class="menu-card">
-                <div class="icon-box bg-leave"><i class="fas fa-user-clock"></i></div>
-                <div class="card-text">
-                    <h3>Xem phép & bù</h3>
-                    <p>Đăng ký nghỉ, xem phép/bù</p>
-                </div>
-            </a>
-
+            <a href="#" id="btn-date" class="menu-card"><div class="icon-box bg-date"><i class="fas fa-calendar-day"></i></div><div class="card-text"><h3>Tính Hạn Sử Dụng</h3><p>Công cụ tính date</p></div></a>
+            <a href="#" id="btn-stock" class="menu-card"><div class="icon-box bg-stock"><i class="fas fa-box-open"></i></div><div class="card-text"><h3>Tra Cứu mẫu tủ</h3><p>Xem hình ảnh tủ</p></div></a>
+            <a href="#" id="btn-leave" class="menu-card"><div class="icon-box bg-leave"><i class="fas fa-user-clock"></i></div><div class="card-text"><h3>Xem phép & bù</h3><p>Đăng ký nghỉ</p></div></a>
         </div>
-    </div>
 
-    <div class="footer">
-        CỔNG THÔNG TIN NỘI BỘ
-    </div>
-
-    <div id="install-banner">
-        <button class="btn-close-inst" onclick="closeBanner()">×</button>
-        <div class="inst-content">
-            <!--<div class="inst-icon">App</div> -->
-			<img src="https://img.icons8.com/fluency/512/skyscrapers.png" class="inst-icon-img">
-            <div class="inst-text" id="inst-guide-text"></div>
+        <div class="section-title" id="sec-event">Sự kiện & Giải trí</div>
+        <div class="menu-grid">
+            <a href="#" id="btn-wheel" class="menu-card"><div class="icon-box bg-wheel"><i class="fas fa-dharmachakra"></i></div><div class="card-text"><h3>Vòng Quay May Mắn</h3><p>Thử vận may ngay</p></div></a>
+            <a href="#" id="btn-lucky" class="menu-card"><div class="icon-box bg-lucky"><i class="fas fa-gift"></i></div><div class="card-text"><h3>Hái Lộc Đầu Năm</h3><p>Nhận lì xì Tết</p></div></a>
         </div>
+
+        <div class="section-title" id="sec-admin">Quản trị</div>
+        <div class="menu-grid">
+            <a href="#" id="btn-admin" class="menu-card">
+                <div class="icon-box bg-admin"><i class="fas fa-cogs"></i></div>
+                <div class="card-text"><h3>Admin System</h3><p>Cấu hình hệ thống</p></div>
+            </a>
+        </div>
+
     </div>
+
+    <div class="footer">INTERNAL PORTAL © 2024</div>
 
 <script>
-    // ==========================================
-    // ⚙️ CẤU HÌNH ĐƯỜNG LINK CỦA BẠN TẠI ĐÂY
-    // ==========================================
+    // ============================================================
+    // 1. KẾT NỐI SUPABASE
+    // ============================================================
+    const SUPABASE_URL = 'https://gpmuckoydhrokpioltem.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwbXVja295ZGhyb2twaW9sdGVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3MTMzNTcsImV4cCI6MjA4MTI4OTM1N30.Fqe5U2hm_fERI6ZLc_FQ1SMh5F4sYOrxr8JqLlwLKI0';
+
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // ============================================================
+    // 2. HÀM TẢI CẤU HÌNH
+    // ============================================================
     
-    // 1. Link công cụ tính Date (Nếu chưa có thì để dấu #)
-    const URL_DATE = "https://bathinh008.github.io/tinhhsd/"; 
-    
-    // 2. Link xem tồn kho (Google Sheet hoặc Web App)
-    const URL_STOCK = "https://bathinh008.github.io/tonkho/"; 
-    
-    // 3. Link file Phép bù (Là link của file employee.html bạn đã up lên mạng)
-    const URL_EMPLOYEE = "https://bathinh008.github.io/LLVNV/"; 
+    async function fetchConfig() {
+        try {
+            let { data, error } = await _supabase
+                .from('app_settings')
+                .select('config_data')
+                .eq('id', 1)
+                .maybeSingle(); 
 
-    // ==========================================
+            if (error) throw error;
+            
+            if (!data) {
+                console.error("Không tìm thấy dữ liệu cấu hình!");
+                alert("Lỗi: Chưa có dữ liệu cấu hình trên Server!");
+                return;
+            }
 
-    // Gán link vào nút
-    document.getElementById("linkDate").href = URL_DATE;
-    document.getElementById("linkStock").href = URL_STOCK;
-    document.getElementById("linkEmployee").href = URL_EMPLOYEE;
+            if (data.config_data) {
+                initApp(data.config_data);
+            }
+        } catch (err) {
+            console.error('Lỗi tải cấu hình:', err);
+        } finally {
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('main-content').style.display = 'block';
+        }
+    }
 
-    // --- LOGIC BANNER CÀI ĐẶT (GIỮ NGUYÊN) ---
-    function checkInstallation() {
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-        if (isStandalone || localStorage.getItem("dismissedInstallBanner") === "true") return;
+    // ============================================================
+    // 3. LOGIC HIỂN THỊ & ĐẾM NGƯỢC
+    // ============================================================
 
-        const ua = navigator.userAgent;
-        const banner = document.getElementById("install-banner");
-        const guide = document.getElementById("inst-guide-text");
-        let show = false;
+    function initApp(config) {
+        const adminLink = "admin.html";
+        
+        setupButton('btn-date', config.features.date, config.urls.date);
+        setupButton('btn-stock', config.features.stock, config.urls.stock);
+        setupButton('btn-leave', config.features.leave, config.urls.leave);
+        setupButton('btn-admin', config.features.admin, adminLink);
 
-        if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) {
-            guide.innerHTML = `<h4>Cài App</h4><p>Bấm nút <b>Chia sẻ</b> <i class="fas fa-share-square"></i> và chọn <b>"Thêm vào MH chính"</b>.</p>`;
-            show = true;
-        } else if (/android/i.test(ua)) {
-            guide.innerHTML = `<h4>Cài App</h4><p>Bấm dấu <b>3 chấm</b> <i class="fas fa-ellipsis-v"></i> và chọn <b>"Thêm vào MH chính"</b>.</p>`;
-            show = true;
+        setupEventButton('btn-wheel', config.features.wheel, config.urls.wheel, config.events.wheel);
+        setupEventButton('btn-lucky', config.features.lucky, config.urls.lucky, config.events.lucky);
+
+        checkSectionVisibility('sec-admin', ['btn-admin']);
+        checkSectionVisibility('sec-event', ['btn-wheel', 'btn-lucky']);
+    }
+
+    function setupButton(id, isActive, url) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (!isActive) {
+            el.classList.add('hidden-item');
+        } else {
+            el.classList.remove('hidden-item');
+            el.href = url && url.trim() !== "" ? url : "#";
+            if(el.getAttribute('href') === "#" && id !== 'btn-admin') {
+                el.onclick = () => alert("Chức năng đang bảo trì!");
+            }
+        }
+    }
+
+    function setupEventButton(id, isActive, url, eventConfig) {
+        const el = document.getElementById(id);
+        if (!el) return;
+
+        // Xóa badge cũ nếu có (để tránh trùng lặp khi reload)
+        const oldBadges = el.querySelectorAll('.status-badge');
+        oldBadges.forEach(b => b.remove());
+        el.classList.remove('hidden-item', 'disabled');
+        el.onclick = null; // Reset sự kiện click
+
+        if (!isActive) {
+            el.classList.add('hidden-item');
+            return;
         }
 
-        if (show) setTimeout(() => banner.style.display = "block", 2000);
-    }
-    function closeBanner() {
-        document.getElementById("install-banner").style.display = "none";
-        localStorage.setItem("dismissedInstallBanner", "true");
-    }
-    checkInstallation();
-</script>
+        // Nếu không dùng thời gian -> Mở luôn
+        if (!eventConfig.useTime) {
+            el.href = url || "#";
+            return;
+        }
 
+        const now = new Date().getTime();
+        const start = new Date(eventConfig.start).getTime();
+        const end = new Date(eventConfig.end).getTime();
+        
+        // --- TRƯỜNG HỢP 1: CHƯA ĐẾN GIỜ (ĐẾM NGƯỢC) ---
+        if (now < start) {
+            // Tạo ID riêng cho badge để cập nhật số
+            const badgeId = `timer-${id}`;
+            
+            // Chèn Badge đếm ngược
+            el.innerHTML += `<span id="${badgeId}" class="status-badge badge-soon">Đang tải...</span>`;
+            
+            // Khóa nút
+            el.classList.add('disabled');
+            el.removeAttribute('href');
+
+            // Bắt đầu chạy đồng hồ đếm ngược
+            startCountdown(badgeId, start, el, url, eventConfig.msgLive);
+        } 
+        // --- TRƯỜNG HỢP 2: ĐANG DIỄN RA ---
+        else if (now >= start && now <= end) {
+            el.innerHTML += `<span class="status-badge badge-live">${eventConfig.msgLive} <i class="fas fa-bolt"></i></span>`;
+            el.href = url || "#";
+        } 
+        // --- TRƯỜNG HỢP 3: ĐÃ KẾT THÚC ---
+        else {
+            el.innerHTML += `<span class="status-badge badge-ended">${eventConfig.msgAfter}</span>`;
+            el.classList.add('disabled');
+            el.removeAttribute('href');
+        }
+    }
+
+    // --- HÀM XỬ LÝ ĐẾM NGƯỢC ---
+    function startCountdown(badgeId, startTime, btnElement, targetUrl, liveMsg) {
+        // Cập nhật mỗi 1 giây
+        const x = setInterval(function() {
+            const now = new Date().getTime();
+            const distance = startTime - now;
+
+            const badgeEl = document.getElementById(badgeId);
+            if(!badgeEl) { clearInterval(x); return; } // Nếu element bị xóa thì dừng
+
+            // Logic tính toán thời gian
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            // Format hiển thị
+            let text = "";
+            if (days > 0) {
+                text = `Mở sau: ${days} ngày ${hours}h`;
+            } else {
+                // Thêm số 0 đằng trước nếu nhỏ hơn 10 (VD: 09:05:01)
+                const h = hours < 10 ? "0" + hours : hours;
+                const m = minutes < 10 ? "0" + minutes : minutes;
+                const s = seconds < 10 ? "0" + seconds : seconds;
+                text = `Mở sau: ${h}:${m}:${s}`;
+            }
+
+            badgeEl.innerText = text;
+
+            // --- KHI HẾT GIỜ (ĐẾM VỀ 0) ---
+            if (distance < 0) {
+                clearInterval(x); // Dừng đồng hồ
+                
+                // Mở khóa giao diện ngay lập tức
+                badgeEl.className = "status-badge badge-live";
+                badgeEl.innerHTML = `${liveMsg} <i class="fas fa-bolt"></i>`;
+                
+                btnElement.classList.remove('disabled');
+                btnElement.href = targetUrl || "#";
+                
+                // Hiệu ứng rung nhẹ báo hiệu
+                btnElement.style.animation = "pulse 0.5s";
+            }
+        }, 1000);
+    }
+
+    function checkSectionVisibility(sectionId, childrenIds) {
+        const section = document.getElementById(sectionId);
+        const children = childrenIds.map(id => document.getElementById(id));
+        const hasVisibleChild = children.some(child => child && !child.classList.contains('hidden-item'));
+        if (section) section.style.display = hasVisibleChild ? 'block' : 'none';
+    }
+
+    // Chạy app
+    fetchConfig();
+
+</script>
 </body>
 </html>
