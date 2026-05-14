@@ -49,6 +49,7 @@
     .bg-date { background: linear-gradient(135deg, #FF9800, #F57C00); }
     .bg-stock { background: linear-gradient(135deg, #2196F3, #1976D2); }
     .bg-leave { background: linear-gradient(135deg, #4CAF50, #388E3C); }
+    .bg-error { background: linear-gradient(135deg, #F44336, #C62828); }
     .bg-admin { background: linear-gradient(135deg, #673AB7, #512DA8); }
     .bg-wheel { background: linear-gradient(135deg, #E91E63, #C2185B); }
     .bg-lucky { background: linear-gradient(135deg, #FFC107, #FFB300); }
@@ -95,6 +96,7 @@
             <a href="#" id="btn-date" class="menu-card"><div class="icon-box bg-date"><i class="fas fa-calendar-day"></i></div><div class="card-text"><h3>Tính Hạn Sử Dụng</h3><p>Công cụ tính date</p></div></a>
             <a href="#" id="btn-stock" class="menu-card"><div class="icon-box bg-stock"><i class="fas fa-box-open"></i></div><div class="card-text"><h3>Tra Cứu mẫu tủ</h3><p>Xem hình ảnh tủ</p></div></a>
             <a href="#" id="btn-leave" class="menu-card"><div class="icon-box bg-leave"><i class="fas fa-user-clock"></i></div><div class="card-text"><h3>Xem phép & bù</h3><p>Đăng ký nghỉ</p></div></a>
+            <a href="#" id="btn-error" class="menu-card"><div class="icon-box bg-error"><i class="fas fa-triangle-exclamation"></i></div><div class="card-text"><h3>Theo dõi hàng lỗi</h3><p>Ghi nhận & xử lý hàng lỗi</p></div></a>
         </div>
 
         <div class="section-title" id="sec-event">Sự kiện & Giải trí</div>
@@ -165,6 +167,7 @@
         setupButton('btn-date', config.features.date, config.urls.date);
         setupButton('btn-stock', config.features.stock, config.urls.stock);
         setupButton('btn-leave', config.features.leave, config.urls.leave);
+        setupButton('btn-error', config.features.errorItems ?? config.features.error ?? true, config.urls.errorItems ?? config.urls.error ?? 'hang-loi.html');
         setupButton('btn-admin', config.features.admin, adminLink);
 
         setupEventButton('btn-wheel', config.features.wheel, config.urls.wheel, config.events.wheel);
