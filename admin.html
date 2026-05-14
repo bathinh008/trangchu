@@ -32,6 +32,7 @@
     .sub-header { font-size: 14px; font-weight: 700; margin: 15px 0 10px; display: flex; align-items: center; gap: 5px; }
     .txt-wheel { color: #E91E63; }
     .txt-lucky { color: #FFC107; }
+    .txt-error { color: #F44336; }
 
     .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
     .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
@@ -78,6 +79,7 @@
             <div class="row"><span>Công cụ Date</span><label class="switch"><input type="checkbox" id="toggle-date"><span class="slider"></span></label></div>
             <div class="row"><span>Tra cứu Kho</span><label class="switch"><input type="checkbox" id="toggle-stock"><span class="slider"></span></label></div>
             <div class="row"><span>Xem Phép</span><label class="switch"><input type="checkbox" id="toggle-leave"><span class="slider"></span></label></div>
+            <div class="row"><span>Theo dõi hàng lỗi</span><label class="switch"><input type="checkbox" id="toggle-error-items"><span class="slider"></span></label></div>
             <div class="row"><span>Vòng Quay</span><label class="switch"><input type="checkbox" id="toggle-wheel"><span class="slider"></span></label></div>
             <div class="row"><span>Hái Lộc</span><label class="switch"><input type="checkbox" id="toggle-lucky"><span class="slider"></span></label></div>
         </div>
@@ -105,6 +107,7 @@
             <div class="input-group"><label>Link Tính Date:</label><input type="text" id="url-date" placeholder="https://..."></div>
             <div class="input-group"><label>Link Tra Kho:</label><input type="text" id="url-stock" placeholder="https://..."></div>
             <div class="input-group"><label>Link Phép/Bù:</label><input type="text" id="url-leave" placeholder="https://..."></div>
+            <div class="input-group"><label>Link Theo dõi hàng lỗi:</label><input type="text" id="url-error-items" placeholder="hang-loi.html hoặc https://..."></div>
 
             <div class="sub-header" style="color:#E91E63; margin-top:20px"><i class="fas fa-gamepad"></i> Game & Sự kiện</div>
             <div class="input-group"><label>Link Vòng quay:</label><input type="text" id="url-wheel" placeholder="https://..."></div>
@@ -173,10 +176,15 @@
     }
 
     function fillForm(cfg) {
+        if(!cfg.features) cfg.features = {};
+        if(!cfg.urls) cfg.urls = {};
+        if(!cfg.events) cfg.events = {};
+
         // Features
         document.getElementById('toggle-date').checked = cfg.features.date;
         document.getElementById('toggle-stock').checked = cfg.features.stock;
         document.getElementById('toggle-leave').checked = cfg.features.leave;
+        document.getElementById('toggle-error-items').checked = cfg.features.errorItems ?? cfg.features.error ?? true;
         document.getElementById('toggle-wheel').checked = cfg.features.wheel;
         document.getElementById('toggle-lucky').checked = cfg.features.lucky;
         
@@ -193,10 +201,11 @@
             document.getElementById('toggle-lucky-time').checked = cfg.events.lucky.useTime;
         }
 
-        // Urls (Đầy đủ 5 món)
+        // Urls (Đầy đủ 6 món)
         document.getElementById('url-date').value = cfg.urls.date || "";
         document.getElementById('url-stock').value = cfg.urls.stock || "";
         document.getElementById('url-leave').value = cfg.urls.leave || "";
+        document.getElementById('url-error-items').value = cfg.urls.errorItems || cfg.urls.error || "hang-loi.html";
         document.getElementById('url-wheel').value = cfg.urls.wheel || "";
         document.getElementById('url-lucky').value = cfg.urls.lucky || "";
     }
@@ -204,10 +213,16 @@
     async function saveConfig() {
         showLoading(true);
         
+        // Đảm bảo cấu trúc config luôn đủ nhánh
+        if(!currentConfig.features) currentConfig.features = {};
+        if(!currentConfig.urls) currentConfig.urls = {};
+        if(!currentConfig.events) currentConfig.events = {};
+
         // Save Features
         currentConfig.features.date = document.getElementById('toggle-date').checked;
         currentConfig.features.stock = document.getElementById('toggle-stock').checked;
         currentConfig.features.leave = document.getElementById('toggle-leave').checked;
+        currentConfig.features.errorItems = document.getElementById('toggle-error-items').checked;
         currentConfig.features.wheel = document.getElementById('toggle-wheel').checked;
         currentConfig.features.lucky = document.getElementById('toggle-lucky').checked;
 
@@ -225,10 +240,11 @@
         currentConfig.events.lucky.end = document.getElementById('time-lucky-end').value.replace('T', ' ');
         currentConfig.events.lucky.useTime = document.getElementById('toggle-lucky-time').checked;
 
-        // Save URLs (Đầy đủ 5 món)
+        // Save URLs (Đầy đủ 6 món)
         currentConfig.urls.date = document.getElementById('url-date').value;
         currentConfig.urls.stock = document.getElementById('url-stock').value;
         currentConfig.urls.leave = document.getElementById('url-leave').value;
+        currentConfig.urls.errorItems = document.getElementById('url-error-items').value || "hang-loi.html";
         currentConfig.urls.wheel = document.getElementById('url-wheel').value;
         currentConfig.urls.lucky = document.getElementById('url-lucky').value;
 
