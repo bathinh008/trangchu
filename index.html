@@ -6,6 +6,8 @@
 <title>TRANG CHỦ NHÂN VIÊN</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0078d4">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&display=swap" rel="stylesheet">
@@ -167,7 +169,7 @@
         setupButton('btn-date', config.features.date, config.urls.date);
         setupButton('btn-stock', config.features.stock, config.urls.stock);
         setupButton('btn-leave', config.features.leave, config.urls.leave);
-        setupButton('btn-error', config.features.errorItems ?? config.features.error ?? true, config.urls.errorItems ?? config.urls.error ?? 'hang-loi.html');
+        setupButton('btn-error', config.features.errorItems ?? config.features.error ?? true, config.urls.errorItems ?? config.urls.error ?? 'hang-loi/');
         setupButton('btn-admin', config.features.admin, adminLink);
 
         setupEventButton('btn-wheel', config.features.wheel, config.urls.wheel, config.events.wheel);
@@ -296,6 +298,18 @@
         const children = childrenIds.map(id => document.getElementById(id));
         const hasVisibleChild = children.some(child => child && !child.classList.contains('hidden-item'));
         if (section) section.style.display = hasVisibleChild ? 'block' : 'none';
+    }
+
+
+    // ============================================================
+    // 4. PWA: đăng ký Service Worker để có thể cài trang chủ như app
+    // ============================================================
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./service-worker.js')
+                .then(() => console.log('PWA Service Worker đã sẵn sàng'))
+                .catch(err => console.warn('Không đăng ký được Service Worker:', err));
+        });
     }
 
     // Chạy app

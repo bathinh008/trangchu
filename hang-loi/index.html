@@ -1,0 +1,4368 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý hàng lỗi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+	<script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+    <!-- SheetJS for Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Camera Barcode Scanner -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .modal-open { overflow: hidden; }
+        .animate-in { animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .tab-active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 600; }
+
+        .sortable-th { position: relative; }
+        .sortable-th > button:not(.excel-filter-btn) { width: 100%; }
+        .sortable-th i { transition: color 0.15s ease, transform 0.15s ease; }
+        .sortable-th:hover { background: #f1f5f9; color: #2563eb; }
+        .sortable-th.active-sort { color: #2563eb; background: #eff6ff; }
+        .excel-filter-btn {
+            position: absolute;
+            top: 50%;
+            right: 8px;
+            transform: translateY(-50%);
+            width: 26px !important;
+            min-width: 26px;
+            max-width: 26px;
+            height: 26px;
+            padding: 0 !important;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            background: transparent;
+        }
+        .excel-filter-btn:hover, .excel-filter-btn.active-filter {
+            color: #2563eb;
+            background: #dbeafe;
+        }
+        .excel-filter-menu {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 8px;
+            z-index: 90;
+            width: 280px;
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 14px;
+            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
+            padding: 10px;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+        .excel-filter-menu.hidden { display: none; }
+        .excel-filter-option-list { max-height: 220px; overflow-y: auto; }
+		@media (max-width: 768px) {
+			.desktop-table {
+				display: none;
+			}
+
+			.mobile-card-list {
+				display: block;
+			}
+
+			header .max-w-7xl {
+				height: auto;
+				padding-top: 10px;
+				padding-bottom: 10px;
+				flex-wrap: wrap;
+				gap: 8px;
+			}
+
+			header h1 {
+				font-size: 16px;
+			}
+
+			#connection-status {
+				font-size: 10px;
+			}
+		}
+
+		@media (min-width: 769px) {
+			.mobile-card-list {
+				display: none;
+			}
+		}
+
+
+        /* Floating button: lên đầu trang */
+        #scroll-top-btn {
+            position: fixed;
+            right: 18px;
+            bottom: 86px;
+            z-index: 90;
+            width: 46px;
+            height: 46px;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25);
+            transform: translateY(14px) scale(0.96);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .2s ease, transform .2s ease;
+        }
+
+        #scroll-top-btn.show {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0) scale(1);
+        }
+
+        @media (min-width: 768px) {
+            #scroll-top-btn {
+                bottom: 28px;
+                right: 28px;
+            }
+        }
+
+
+
+        /* Mobile floating action: Báo lỗi mới */
+        #mobile-new-defect-btn {
+            position: fixed;
+            right: 18px;
+            bottom: 86px;
+            z-index: 89;
+            min-width: 58px;
+            height: 58px;
+            border-radius: 999px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 0 18px;
+            box-shadow: 0 14px 30px rgba(37, 99, 235, 0.35);
+        }
+
+        #mobile-new-defect-btn i {
+            font-size: 18px;
+        }
+
+        #mobile-new-defect-btn .mobile-fab-text {
+            display: none;
+            font-size: 13px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 768px) {
+            #mobile-new-defect-btn {
+                display: inline-flex;
+            }
+
+            #scroll-top-btn {
+                bottom: 154px;
+            }
+        }
+
+        body.modal-open #mobile-new-defect-btn {
+            display: none !important;
+        }
+
+        @media (max-width: 390px) {
+            #mobile-new-defect-btn {
+                width: 54px;
+                min-width: 54px;
+                height: 54px;
+                padding: 0;
+            }
+        }
+
+
+
+        /* Premium loading overlay */
+        #app-loading-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 22px;
+            background:
+                radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 34%),
+                radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.20), transparent 32%),
+                rgba(15, 23, 42, 0.42);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+
+        #app-loading-overlay.show {
+            display: flex;
+        }
+
+        .premium-loader-card {
+            width: min(92vw, 360px);
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 0 28px 70px rgba(15, 23, 42, 0.26);
+            border-radius: 28px;
+            padding: 28px 24px;
+            text-align: center;
+            transform: translateY(8px) scale(0.98);
+            animation: loaderPop .22s ease-out forwards;
+        }
+
+        @keyframes loaderPop {
+            to { transform: translateY(0) scale(1); }
+        }
+
+        .premium-loader-logo {
+            width: 74px;
+            height: 74px;
+            margin: 0 auto 18px;
+            border-radius: 24px;
+            display: grid;
+            place-items: center;
+            color: white;
+            background: linear-gradient(135deg, #2563eb, #06b6d4, #10b981);
+            box-shadow: 0 18px 35px rgba(37, 99, 235, 0.28);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .premium-loader-logo::before {
+            content: '';
+            position: absolute;
+            inset: -42%;
+            border: 3px solid rgba(255, 255, 255, 0.42);
+            border-top-color: rgba(255, 255, 255, 0.95);
+            border-radius: 999px;
+            animation: loaderSpin 1s linear infinite;
+        }
+
+        .premium-loader-logo i {
+            position: relative;
+            z-index: 1;
+            font-size: 28px;
+        }
+
+        @keyframes loaderSpin {
+            to { transform: rotate(360deg); }
+        }
+
+        #app-loading-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 6px;
+        }
+
+        #app-loading-subtitle {
+            font-size: 13px;
+            color: #64748b;
+            line-height: 1.45;
+            min-height: 18px;
+        }
+
+        .premium-loader-bar {
+            height: 8px;
+            margin-top: 20px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: #e2e8f0;
+        }
+
+        .premium-loader-bar span {
+            display: block;
+            height: 100%;
+            width: 45%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #2563eb, #06b6d4, #10b981);
+            animation: loaderBar 1.25s ease-in-out infinite;
+        }
+
+        @keyframes loaderBar {
+            0% { transform: translateX(-115%); }
+            55% { transform: translateX(95%); }
+            100% { transform: translateX(235%); }
+        }
+
+        .premium-loader-dots {
+            display: inline-flex;
+            gap: 5px;
+            margin-top: 16px;
+        }
+
+        .premium-loader-dots span {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: #2563eb;
+            opacity: 0.35;
+            animation: loaderDots 1s ease-in-out infinite;
+        }
+
+        .premium-loader-dots span:nth-child(2) { animation-delay: .15s; }
+        .premium-loader-dots span:nth-child(3) { animation-delay: .3s; }
+
+        @keyframes loaderDots {
+            0%, 100% { opacity: .28; transform: translateY(0); }
+            50% { opacity: 1; transform: translateY(-4px); }
+        }
+
+        .btn-loading {
+            pointer-events: none;
+            opacity: .78;
+            position: relative;
+        }
+
+        .btn-loading::after {
+            content: '';
+            width: 15px;
+            height: 15px;
+            margin-left: 8px;
+            border: 2px solid rgba(255, 255, 255, .65);
+            border-top-color: #fff;
+            border-radius: 999px;
+            display: inline-block;
+            vertical-align: -2px;
+            animation: loaderSpin .75s linear infinite;
+        }
+
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen pb-20 md:pb-0">
+
+    <!-- Loading overlay giống web app hiện đại -->
+    <div id="app-loading-overlay" aria-live="polite" aria-busy="true">
+        <div class="premium-loader-card">
+            <div class="premium-loader-logo">
+                <i class="fas fa-box-open"></i>
+            </div>
+            <div id="app-loading-title">Đang tải dữ liệu...</div>
+            <div id="app-loading-subtitle">Vui lòng chờ trong giây lát</div>
+            <div class="premium-loader-bar"><span></span></div>
+            <div class="premium-loader-dots"><span></span><span></span><span></span></div>
+        </div>
+    </div>
+
+
+	<!--Đăng nhập-->
+	<div id="login-screen" class="fixed inset-0 bg-slate-100 z-[999] flex items-center justify-center">
+		<form onsubmit="event.preventDefault(); loginApp();"
+			class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm">
+			<h2 class="text-2xl font-bold mb-6 text-center">Đăng nhập</h2>
+
+			<select id="login-mode"
+				class="w-full mb-3 px-4 py-3 border rounded-xl outline-none">
+				<option value="app_user">Đăng nhập với quyền Nhân viên</option>
+				<option value="auth">Đăng nhập với quyền Quản trị viên</option>
+			</select>
+
+			<input id="login-user" type="text" placeholder="Email hoặc tài khoản"
+				class="w-full mb-3 px-4 py-3 border rounded-xl outline-none">
+
+			<input id="login-pass" type="password" placeholder="Mật khẩu"
+				class="w-full mb-4 px-4 py-3 border rounded-xl outline-none">
+
+			<button onclick="loginApp()"
+				class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700">
+				Đăng nhập
+			</button>
+
+			<p id="login-error" class="hidden text-red-500 text-sm mt-3 text-center">
+				Sai tài khoản hoặc mật khẩu
+			</p>
+		</form>
+	</div>
+
+    <!-- Header -->
+    <header class="bg-white border-b sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="p-2 bg-blue-600 rounded-lg">
+                    <i class="fas fa-box text-white text-xl"></i>
+                </div>
+                <h1 class="text-xl font-bold tracking-tight">Quản lý hàng lỗi</h1>
+            </div>
+            <nav class="hidden md:flex gap-8">
+				<button onclick="switchTab('dashboard')" id="tab-dashboard" class="py-5 px-1 tab-active transition-all">Báo cáo lỗi</button>
+				<button onclick="switchTab('history')" id="tab-history" class="py-5 px-1 text-slate-500 hover:text-blue-600 transition-all">Lịch sử</button>
+				<button onclick="switchTab('catalog')" id="tab-catalog" class="admin-po-only py-5 px-1 text-slate-500 hover:text-blue-600 transition-all">
+					Danh mục hàng hóa
+				</button>
+				<button onclick="switchTab('users')" 
+					id="tab-users"
+					class="admin-only py-5 px-1 text-slate-500 hover:text-blue-600 transition-all">
+					
+					Quản lý tài khoản
+				</button>
+				<button onclick="switchTab('logs')"
+					id="tab-logs"
+					class="admin-only py-5 px-1 text-slate-500 hover:text-blue-600 transition-all">
+					Nhật ký
+				</button>
+			</nav>
+			<div class="flex items-center gap-3">
+
+				<div class="hidden md:flex flex-col items-end">
+					<span class="text-sm text-slate-400">
+						Xin chào,
+					</span>
+
+					<span id="hello-user"
+						class="font-bold text-slate-700">
+						Người dùng
+					</span>
+				</div>
+
+				<button onclick="toggleNotificationsPanel()"
+					class="relative w-10 h-10 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 flex items-center justify-center transition-colors"
+					title="Thông báo">
+					<i class="fas fa-bell"></i>
+					<span id="notification-badge"
+						class="hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold items-center justify-center">0</span>
+				</button>
+
+				<button onclick="logoutApp()" 
+					class="text-sm bg-red-50 text-red-600 px-3 py-1 rounded-lg font-semibold">
+					Đăng xuất
+				</button>
+
+			</div>
+            <div id="connection-status" class="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full flex items-center gap-2">
+                <span id="status-dot" class="w-2 h-2 rounded-full bg-yellow-400"></span> <span id="status-text">Đang kết nối Supabase...</span>
+            </div>
+        </div>
+    </header>
+
+	<!-- Mobile Bottom Nav -->
+	<nav id="mobile-bottom-nav"
+		class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(15,23,42,0.08)] px-2 py-2 grid grid-cols-5 gap-1">
+
+		<button onclick="switchTab('dashboard')" id="m-tab-dashboard"
+			class="flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-blue-600 bg-blue-50 font-semibold text-[11px]">
+			<i class="fas fa-clipboard-list text-lg"></i>
+			<span>Báo lỗi</span>
+		</button>
+
+		<button onclick="switchTab('history')" id="m-tab-history"
+			class="flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-slate-500 font-semibold text-[11px]">
+			<i class="fas fa-clock-rotate-left text-lg"></i>
+			<span>Lịch sử</span>
+		</button>
+
+		<button onclick="switchTab('catalog')" id="m-tab-catalog"
+			class="admin-po-only flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-slate-500 font-semibold text-[11px]">
+			<i class="fas fa-boxes-stacked text-lg"></i>
+			<span>Danh mục</span>
+		</button>
+
+		<button onclick="switchTab('users')" id="m-tab-users"
+			class="admin-only flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-slate-500 font-semibold text-[11px]">
+			<i class="fas fa-users-gear text-lg"></i>
+			<span>Tài khoản</span>
+		</button>
+
+		<button onclick="switchTab('logs')" id="m-tab-logs"
+			class="admin-only flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-slate-500 font-semibold text-[11px]">
+			<i class="fas fa-clipboard-list text-lg"></i>
+			<span>Log</span>
+		</button>
+
+	</nav>
+
+    <!-- Dashboard View -->
+    <main id="view-dashboard" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Stats Dashboard -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
+            <div class="bg-white border border-slate-200 p-4 md:p-5 rounded-2xl shadow-sm">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-sm font-medium text-slate-500">Tổng số lỗi</span>
+                    <div class="p-2 rounded-lg text-blue-600 bg-blue-50"><i class="fas fa-chart-bar"></i></div>
+                </div>
+                <div id="stat-total" class="text-2xl font-bold">0</div>
+            </div>
+            <div class="bg-white border border-slate-200 p-4 md:p-5 rounded-2xl shadow-sm">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-sm font-medium text-slate-500">Chờ xử lý</span>
+                    <div class="p-2 rounded-lg text-yellow-600 bg-yellow-50"><i class="fas fa-clock"></i></div>
+                </div>
+                <div id="stat-pending" class="text-2xl font-bold">0</div>
+            </div>
+            <div class="bg-white border border-slate-200 p-4 md:p-5 rounded-2xl shadow-sm">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-sm font-medium text-slate-500">Đang sửa</span>
+                    <div class="p-2 rounded-lg text-orange-600 bg-orange-50"><i class="fas fa-exclamation-circle"></i></div>
+                </div>
+                <div id="stat-fixing" class="text-2xl font-bold">0</div>
+            </div>
+            <div class="bg-white border border-slate-200 p-4 md:p-5 rounded-2xl shadow-sm">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-sm font-medium text-slate-500">Đã xong</span>
+                    <div class="p-2 rounded-lg text-green-600 bg-green-50"><i class="fas fa-check-circle"></i></div>
+                </div>
+                <div id="stat-resolved" class="text-2xl font-bold">0</div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex flex-col md:flex-row gap-4 mb-6 justify-between items-center">
+            <div class="relative w-full md:w-96">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input 
+                    type="text" 
+                    id="search-input"
+                    placeholder="Tìm theo sản phẩm, ITEM, tên NCC hoặc mã NCC..."
+                    class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                >
+            </div>
+            
+            <div class="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+                <select 
+                    id="filter-status"
+                    class="bg-white border border-slate-200 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+                    onchange="renderDashboard()"
+                >
+                    <option value="All">Tất cả trạng thái</option>
+                    <option value="Pending">Chờ xử lý</option>
+                    <option value="Fixing">Đang sửa</option>
+                    <option value="Resolved">Đã hoàn thành</option>
+                </select>
+                <div class="grid grid-cols-2 md:flex gap-2">
+					<button onclick="downloadDefectSampleExcel()"
+						class="admin-po-only bg-white hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg flex items-center gap-2 border border-slate-200 transition-colors">
+						
+						<i class="fas fa-download text-blue-600"></i>
+						File mẫu
+					</button>
+
+					<button onclick="document.getElementById('defect-excel-input').click()"
+						class="admin-po-only bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-4 py-2 rounded-lg flex items-center gap-2 border border-emerald-200 transition-colors">
+
+						<i class="fas fa-file-import"></i>
+						Nhập Excel
+					</button>
+
+					<input type="file" id="defect-excel-input" class="hidden" accept=".xlsx, .xls">
+
+					<button onclick="exportDefectsToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+						<i class="fas fa-file-excel"></i> Xuất Excel
+					</button>
+
+					<button onclick="resetTableFilters('dashboard')"
+						class="hidden md:flex bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg items-center gap-2 border border-slate-200 transition-colors">
+						<i class="fas fa-rotate-left text-blue-600"></i> Reset lọc
+					</button>
+
+					<button onclick="deleteAllDefects()" 
+						class="admin-only bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+						<i class="fas fa-trash-alt"></i>
+						Xóa tất cả
+					</button>
+
+					<button onclick="toggleModal('modal-defect', true)" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+						<i class="fas fa-plus"></i> Báo lỗi mới
+					</button>
+				</div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm desktop-table">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse min-w-[800px]">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+						<tr>
+							<th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('dashboard', 'created_at')">
+								<button type="button" class="flex items-center gap-2 text-left uppercase tracking-wider">Thời gian <i id="sort-dashboard-created_at" class="fas fa-sort text-slate-300"></i></button>
+							</th>
+							<th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('dashboard', 'product_name')">
+								<button type="button" class="flex items-center gap-2 text-left uppercase tracking-wider">Thông tin sản phẩm lỗi <i id="sort-dashboard-product_name" class="fas fa-sort text-slate-300"></i></button>
+							</th>
+							<th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('dashboard', 'vendor_name')">
+								<button type="button" class="flex items-center gap-2 text-left uppercase tracking-wider">Tên Nhà cung cấp <i id="sort-dashboard-vendor_name" class="fas fa-sort text-slate-300"></i></button>
+							</th>
+							<th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('dashboard', 'vendor_id')">
+								<button type="button" class="flex items-center gap-2 text-left uppercase tracking-wider">Mã Nhà cung cấp <i id="sort-dashboard-vendor_id" class="fas fa-sort text-slate-300"></i></button>
+							</th>
+							<th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('dashboard', 'defect_type')">
+								<button type="button" class="flex items-center gap-2 text-left uppercase tracking-wider">Mô tả lỗi <i id="sort-dashboard-defect_type" class="fas fa-sort text-slate-300"></i></button>
+							</th>
+							<th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('dashboard', 'status')">
+								<button type="button" class="flex items-center gap-2 text-left uppercase tracking-wider">Kết quả <i id="sort-dashboard-status" class="fas fa-sort text-slate-300"></i></button>
+							</th>
+							<th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Xóa</th>
+						</tr>
+					</thead>
+                    <tbody id="defect-list" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </div>
+		<div id="defect-mobile-list" class="mobile-card-list space-y-3"></div>
+    </main>
+
+    <!-- Catalog View -->
+    <main id="view-catalog" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
+        <div class="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-6">
+
+			<!-- LEFT -->
+			<div class="w-full md:w-auto">
+
+				<h2 class="text-2xl font-bold">
+					Danh mục hàng hóa
+				</h2>
+
+				<div class="relative w-full md:w-96 mt-3">
+					<i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+
+					<input id="catalog-search" type="text"
+						placeholder="Tìm barcode, tên sản phẩm, ITEM, tên NCC hoặc mã NCC..."
+						class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+				</div>
+
+			</div>
+
+			<!-- RIGHT -->
+			<div class="grid grid-cols-2 md:flex gap-2 w-full md:w-auto">
+
+				<button onclick="downloadSampleExcel()" 
+					class="admin-po-only bg-white hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl flex items-center gap-2 border border-slate-200 shadow-sm">
+
+					<i class="fas fa-download text-blue-600"></i>
+					Tải file mẫu
+				</button>
+
+				<button onclick="document.getElementById('excel-input').click()" 
+					class="admin-po-only bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl flex items-center gap-2 border border-slate-200 shadow-sm">
+
+					<i class="fas fa-file-excel text-green-600"></i>
+					Nhập từ Excel
+				</button>
+
+				<input type="file" id="excel-input" class="hidden" accept=".xlsx, .xls">
+
+				<button onclick="toggleModal('modal-catalog', true)" 
+					class="admin-po-only bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm">
+
+					<i class="fas fa-plus"></i>
+					Thêm thủ công
+				</button>
+
+			</div>
+
+		</div>
+        <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm desktop-table">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse min-w-[800px]">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('catalog', 'barcode')">
+                                <button type="button" class="flex items-center gap-2 text-left uppercase tracking-wider">Mã vạch <i id="sort-catalog-barcode" class="fas fa-sort text-slate-300"></i></button>
+                            </th>
+                            <th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('catalog', 'product_name')">
+                                <button type="button" class="flex items-center gap-2 text-left uppercase tracking-wider">Tên sản phẩm <i id="sort-catalog-product_name" class="fas fa-sort text-slate-300"></i></button>
+                            </th>
+                            <th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('catalog', 'sku')">
+                                <button type="button" class="flex items-center gap-2 text-left uppercase tracking-wider">Item <i id="sort-catalog-sku" class="fas fa-sort text-slate-300"></i></button>
+                            </th>
+                            <th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('catalog', 'vendor_name')">
+                                <button type="button" class="flex items-center gap-2 text-left uppercase tracking-wider">Tên Nhà cung cấp <i id="sort-catalog-vendor_name" class="fas fa-sort text-slate-300"></i></button>
+                            </th>
+							<th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('catalog', 'vendor_id')">
+                                <button type="button" class="flex items-center gap-2 text-left uppercase tracking-wider">Mã Nhà cung cấp <i id="sort-catalog-vendor_id" class="fas fa-sort text-slate-300"></i></button>
+                            </th>
+                            <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Xóa</th>
+                        </tr>
+                    </thead>
+                    <tbody id="catalog-list" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </div>
+		<div id="catalog-mobile-list" class="mobile-card-list space-y-3"></div>
+    </main>
+
+	<!-- History View -->
+	<main id="view-history" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
+		<div class="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-6">
+
+			<!-- LEFT -->
+			<div class="w-full md:w-auto">
+				<h2 class="text-2xl font-bold text-slate-800">
+					Lịch sử hàng lỗi đã xử lý
+				</h2>
+
+				<p class="text-sm text-slate-500 mt-1">
+					Chỉ hiển thị những hàng có kết quả: Xong
+				</p>
+			</div>
+
+			<!-- CENTER -->
+			<div class="relative w-full md:w-96">
+				<i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+
+				<input id="history-search" type="text"
+					placeholder="Tìm lịch sử theo sản phẩm, ITEM, barcode, tên NCC hoặc mã NCC..."
+					class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+			</div>
+
+			<!-- RIGHT -->
+			<div class="flex gap-2 w-full md:w-auto">
+				<button onclick="exportHistoryToExcel()" 
+					class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap">
+
+					<i class="fas fa-file-excel"></i>
+					Xuất lịch sử
+				</button>
+
+				<button onclick="resetTableFilters('history')"
+					class="hidden md:flex bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg items-center gap-2 border border-slate-200 transition-colors whitespace-nowrap">
+					<i class="fas fa-rotate-left text-blue-600"></i>
+					Reset lọc
+				</button>
+
+				<button onclick="deleteAllHistoryDefects()"
+					class="admin-only bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap">
+					<i class="fas fa-trash-alt"></i>
+					Xóa lịch sử
+				</button>
+			</div>
+
+		</div>
+
+		<div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm desktop-table">
+			<div class="overflow-x-auto">
+				<table class="w-full text-left border-collapse min-w-[800px]">
+					<thead class="bg-slate-50 border-b border-slate-200">
+						<tr>
+							<th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('history', 'created_at')">
+								<button type="button" class="flex items-center gap-2 text-left uppercase tracking-wider">Thời gian <i id="sort-history-created_at" class="fas fa-sort text-slate-300"></i></button>
+							</th>
+							<th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('history', 'product_name')">
+								<button type="button" class="flex items-center gap-2 text-left uppercase tracking-wider">Thông tin sản phẩm <i id="sort-history-product_name" class="fas fa-sort text-slate-300"></i></button>
+							</th>
+							<th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('history', 'vendor_name')">
+								<button type="button" class="flex items-center gap-2 text-left uppercase tracking-wider">Tên NCC <i id="sort-history-vendor_name" class="fas fa-sort text-slate-300"></i></button>
+							</th>
+							<th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('history', 'vendor_id')">
+								<button type="button" class="flex items-center gap-2 text-left uppercase tracking-wider">Mã NCC <i id="sort-history-vendor_id" class="fas fa-sort text-slate-300"></i></button>
+							</th>
+							<th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('history', 'defect_type')">
+								<button type="button" class="flex items-center gap-2 text-left uppercase tracking-wider">Mô tả lỗi <i id="sort-history-defect_type" class="fas fa-sort text-slate-300"></i></button>
+							</th>
+							<th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('history', 'status')">
+								<button type="button" class="flex items-center gap-2 text-left uppercase tracking-wider">Kết quả <i id="sort-history-status" class="fas fa-sort text-slate-300"></i></button>
+							</th>
+							<th class="admin-only px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Xóa</th>
+						</tr>
+					</thead>
+					<tbody id="history-list" class="divide-y divide-slate-100"></tbody>
+				</table>
+			</div>
+		</div>
+
+		<div id="history-mobile-list" class="mobile-card-list space-y-3"></div>
+	</main>
+
+	<!-- View Users -->
+	<main id="view-users" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
+
+		<div class="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-6">
+
+			<!-- LEFT -->
+			<div class="w-full md:w-auto">
+				<h2 class="text-2xl font-bold text-slate-800">
+					Quản lý tài khoản
+				</h2>
+
+				<p class="text-sm text-slate-500 mt-1">
+					Quản lý tài khoản nội bộ hệ thống
+				</p>
+			</div>
+
+			<!-- CENTER -->
+			<div class="relative w-full md:w-96">
+				<i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+
+				<input id="users-search" type="text"
+					placeholder="Tìm tài khoản, họ tên, role..."
+					class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+			</div>
+
+			<!-- RIGHT -->
+			<button onclick="toggleModal('modal-user', true)"
+				class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap">
+
+				<i class="fas fa-user-plus"></i>
+				Thêm tài khoản
+			</button>
+
+		</div>
+
+		<div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm desktop-table">
+
+			<div class="overflow-x-auto">
+				<table class="w-full text-left border-collapse min-w-[800px]">
+
+					<thead class="bg-slate-50 border-b border-slate-200">
+						<tr>
+							<th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase cursor-pointer" onclick="sortTable('users', 'username')">
+								<button type="button" class="flex items-center gap-2 text-left uppercase">Tài khoản <i id="sort-users-username" class="fas fa-sort text-slate-300"></i></button>
+							</th>
+							<th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase cursor-pointer" onclick="sortTable('users', 'full_name')">
+								<button type="button" class="flex items-center gap-2 text-left uppercase">Họ tên <i id="sort-users-full_name" class="fas fa-sort text-slate-300"></i></button>
+							</th>
+							<th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase cursor-pointer" onclick="sortTable('users', 'role')">
+								<button type="button" class="flex items-center gap-2 text-left uppercase">Role <i id="sort-users-role" class="fas fa-sort text-slate-300"></i></button>
+							</th>
+							<th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase cursor-pointer" onclick="sortTable('users', 'active')">
+								<button type="button" class="flex items-center gap-2 text-left uppercase">Trạng thái <i id="sort-users-active" class="fas fa-sort text-slate-300"></i></button>
+							</th>
+							<th class="sortable-th px-6 py-4 text-xs font-semibold text-slate-500 uppercase cursor-pointer" onclick="sortTable('users', 'created_at')">
+								<button type="button" class="flex items-center gap-2 text-left uppercase">Ngày tạo <i id="sort-users-created_at" class="fas fa-sort text-slate-300"></i></button>
+							</th>
+							<th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase text-right">Hành động</th>
+						</tr>
+					</thead>
+
+					<tbody id="users-list" class="divide-y divide-slate-100"></tbody>
+
+				</table>
+			</div>
+		</div>
+		<div id="users-mobile-list" class="mobile-card-list space-y-3"></div>
+
+	</main>
+
+	<!-- View Logs - chỉ admin -->
+	<main id="view-logs" class="admin-only max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
+		<div class="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-6">
+			<div class="w-full md:w-auto">
+				<h2 class="text-2xl font-bold text-slate-800">Nhật ký hoạt động</h2>
+				<p class="text-sm text-slate-500 mt-1">Chỉ admin mới xem được tài khoản nào đăng nhập, thêm, sửa, xóa, cập nhật dữ liệu.</p>
+			</div>
+
+			<div class="relative w-full md:w-96">
+				<i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+				<input id="logs-search" type="text"
+					placeholder="Tìm tài khoản, hành động, nội dung log..."
+					class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+			</div>
+
+			<select id="logs-action-filter"
+				class="bg-white border border-slate-200 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500">
+				<option value="All">Tất cả hành động</option>
+				<option value="login">Đăng nhập</option>
+				<option value="logout">Đăng xuất</option>
+				<option value="create">Thêm mới</option>
+				<option value="update">Cập nhật/Sửa</option>
+				<option value="delete">Xóa</option>
+				<option value="import">Nhập Excel</option>
+			</select>
+		</div>
+
+		<div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm desktop-table">
+			<div class="overflow-x-auto">
+				<table class="w-full text-left border-collapse min-w-[1000px]">
+					<thead class="bg-slate-50 border-b border-slate-200">
+						<tr>
+							<th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Thời gian</th>
+							<th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Tài khoản</th>
+							<th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Hành động</th>
+							<th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Đối tượng</th>
+							<th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Nội dung</th>
+							<th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Chi tiết</th>
+						</tr>
+					</thead>
+					<tbody id="logs-list" class="divide-y divide-slate-100"></tbody>
+				</table>
+			</div>
+		</div>
+
+		<div id="logs-mobile-list" class="mobile-card-list space-y-3"></div>
+	</main>
+
+
+    <!-- Modal: Báo lỗi mới -->
+    <div id="modal-defect" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in">
+            <div class="flex items-center justify-between p-6 border-b">
+                <h2 class="text-xl font-bold">Báo cáo lỗi</h2>
+                <button onclick="toggleModal('modal-defect', false)" class="p-2 hover:bg-slate-100 rounded-full"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="defect-form" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                <div class="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                    <label class="block text-sm font-bold text-blue-700 mb-1">Quét Mã vạch</label>
+                    <div class="flex gap-2">
+                        <input type="tel" id="auto-barcode" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" placeholder="Nhập hoặc quét mã vạch..." class="flex-1 min-w-0 px-4 py-2 border-blue-200 border rounded-lg outline-none">
+                        <button type="button" onclick="openBarcodeScanner()"
+                            class="shrink-0 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-bold flex items-center gap-2">
+                            <i class="fas fa-qrcode"></i>
+                            <span class="hidden sm:inline">Quét</span>
+                        </button>
+                    </div>
+                    <p id="search-status" class="text-[10px] mt-1 text-blue-600 hidden">Đã tìm thấy thông tin!</p>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <input required name="product_name" id="f-product_name" placeholder="Tên sản phẩm" class="px-3 py-2 border rounded-lg">
+                    <input required name="sku" id="f-sku" placeholder="Item" class="px-3 py-2 border rounded-lg font-mono">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <input name="vendor_name" id="f-vendor_name" placeholder="Tên NCC" class="px-3 py-2 border rounded-lg">
+                    <input name="vendor_id" id="f-vendor_id" placeholder="Mã NCC" class="px-3 py-2 border rounded-lg font-mono">
+                </div>
+                <input required name="defect_type" placeholder="Mô tả lỗi" class="w-full px-3 py-2 border rounded-lg">
+				<div class="space-y-2">
+					<label class="block text-sm font-medium text-slate-700">Số lượng lỗi</label>
+					<input type="number" name="quantity" id="f-quantity" min="1" value="1" 
+						   class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+				</div>
+				<div class="space-y-2">
+					<label class="block text-sm font-medium text-slate-700">Hình ảnh sản phẩm lỗi</label>
+					<input type="file" id="f-image" accept="image/*" required class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+					<img id="image-preview" class="hidden mt-2 w-full h-32 object-cover rounded-lg border">
+				</div>
+                <div class="grid grid-cols-2 gap-4">
+                    <select name="severity" class="px-3 py-2 border rounded-lg">
+                        <option value="Low">Thấp</option>
+                        <option value="Medium" selected>Trung bình</option>
+                        <option value="High">Nghiêm trọng</option>
+                    </select>
+                    <select name="status" class="px-3 py-2 border rounded-lg">
+                        <option value="Pending">Chờ xử lý</option>
+                        <option value="Fixing">Đang sửa</option>
+                        <option value="Resolved">Đã hoàn thành</option>
+                    </select>
+                </div>
+                <input type="hidden" name="barcode" id="f-barcode">
+                <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">Lưu báo cáo</button>
+            </form>
+        </div>
+    </div>
+
+
+
+    <!-- Modal: Quét mã vạch bằng máy ảnh -->
+    <div id="modal-barcode-scanner" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[95] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in">
+            <div class="flex items-center justify-between p-4 border-b">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-800">Quét mã vạch</h2>
+                    <p class="text-xs text-slate-500">Đưa mã vạch vào giữa khung camera</p>
+                </div>
+                <button type="button" onclick="closeBarcodeScanner()" class="p-2 hover:bg-slate-100 rounded-full">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="p-4 space-y-3">
+                <div id="barcode-reader" class="w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-900"></div>
+                <div id="barcode-scan-status" class="text-sm text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                    Đang chuẩn bị camera...
+                </div>
+                <button type="button" onclick="closeBarcodeScanner()"
+                    class="w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold">
+                    Đóng camera
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Thêm danh mục -->
+    <div id="modal-catalog" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in">
+            <div class="flex items-center justify-between p-6 border-b">
+                <h2 class="text-xl font-bold">Thêm vào danh mục</h2>
+                <button onclick="toggleModal('modal-catalog', false)" class="p-2 hover:bg-slate-100 rounded-full"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="catalog-form" class="p-6 space-y-4">
+                <input required name="barcode" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" placeholder="Barcode" class="w-full px-3 py-2 border rounded-lg">
+                <input required name="product_name" placeholder="Tên hàng" class="w-full px-3 py-2 border rounded-lg">
+                <input required name="sku" placeholder="ITEM" class="w-full px-3 py-2 border rounded-lg font-mono">
+                <div class="grid grid-cols-2 gap-4">
+                    <input name="vendor_name" placeholder="Nhà cung cấp" class="px-3 py-2 border rounded-lg">
+                    <input name="vendor_id" placeholder="Mã NCC" class="px-3 py-2 border rounded-lg">
+                </div>
+                <button type="submit" class="w-full py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors">Lưu danh mục</button>
+            </form>
+        </div>
+    </div>
+
+	<div id="modal-image" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4" onclick="toggleImageModal(false)">
+		<div class="relative max-w-4xl w-full flex flex-col items-center">
+			<button class="absolute -top-12 right-0 text-white text-2xl hover:text-red-500 transition-colors">
+				<i class="fas fa-times"></i>
+			</button>
+			<img id="full-res-image" src="" class="max-h-[80vh] w-auto rounded-lg shadow-2xl">
+			<div class="mt-6 flex gap-4">
+				<a id="download-link" href="" download="hinh-anh-loi.jpg" 
+				   class="bg-white text-slate-900 px-6 py-2 rounded-full font-bold flex items-center gap-2 hover:bg-blue-50 transition-colors"
+				   onclick="event.stopPropagation()">
+					<i class="fas fa-download text-blue-600"></i> Tải ảnh về máy
+				</a>
+			</div>
+		</div>
+	</div>
+	
+	<div id="modal-status" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4">
+		<div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-5 animate-in max-h-[90vh] overflow-y-auto">
+    
+			<div class="flex items-start justify-between mb-3">
+				<div>
+					<h2 class="text-xl font-bold text-slate-800 leading-tight">
+						Cập nhật kết quả xử lý
+					</h2>
+
+					<p class="text-sm text-slate-400 mt-1">
+						Chạm để cập nhật trạng thái
+					</p>
+				</div>
+
+				<button onclick="toggleModal('modal-status', false)"
+					class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-red-50 hover:text-red-500 transition-all">
+					<i class="fas fa-times"></i>
+				</button>
+			</div>
+
+			<input type="hidden" id="status-defect-id">
+
+			<!-- INFO -->
+			<div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 mb-4">
+
+				<div class="font-bold text-lg text-slate-800 mb-3"
+					 id="status-product-name">
+					Tên sản phẩm
+				</div>
+
+				<div class="grid grid-cols-2 gap-3 text-sm">
+
+					<div class="bg-white rounded-xl p-2.5 border border-slate-100">
+						<div class="text-slate-400 text-xs mb-1">Item</div>
+						<div class="font-semibold text-slate-700"
+							 id="status-sku">
+							-
+						</div>
+					</div>
+
+					<div class="bg-white rounded-xl p-3 border border-slate-100">
+						<div class="text-slate-400 text-xs mb-1">Barcode</div>
+						<div class="font-semibold text-slate-700"
+							 id="status-barcode">
+							-
+						</div>
+					</div>
+
+				</div>
+
+				<div class="mt-3 bg-white rounded-xl p-3 border border-slate-100">
+					<div class="text-slate-400 text-xs mb-1">
+						Ngày cập nhật
+					</div>
+
+					<div class="font-semibold text-slate-700"
+						 id="status-date">
+						-
+					</div>
+				</div>
+			</div>
+			
+			<!-- NÚT TRẠNG THÁI -->
+			<div class="space-y-3">
+				<button onclick="saveStatus('Pending')" class="w-full py-2.5 rounded-xl text-sm bg-yellow-100 text-yellow-800 font-bold">
+					Chờ xử lý
+				</button>
+
+				<button onclick="saveStatus('Fixing')" class="w-full py-3 rounded-xl bg-orange-100 text-orange-800 font-bold">
+					Đã sửa / Đang sửa
+				</button>
+
+				<button onclick="saveStatus('Resolved')" class="w-full py-3 rounded-xl bg-green-100 text-green-800 font-bold">
+					Xong
+				</button>
+			</div>
+		</div>
+	</div>
+
+	<div id="modal-user"
+		class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[80] hidden flex items-center justify-center p-4">
+
+		<div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in">
+
+			<div class="flex items-center justify-between p-6 border-b">
+				<h2 class="text-xl font-bold">
+					Thêm tài khoản
+				</h2>
+
+				<button onclick="toggleModal('modal-user', false)"
+					class="p-2 hover:bg-slate-100 rounded-full">
+
+					<i class="fas fa-times"></i>
+				</button>
+			</div>
+
+			<form id="user-form" class="p-6 space-y-4">
+
+				<input required name="username"
+					placeholder="Tài khoản"
+					class="w-full px-3 py-2 border rounded-lg">
+
+				<input required name="full_name"
+					placeholder="Họ tên"
+					class="w-full px-3 py-2 border rounded-lg">
+
+				<input required name="password"
+					type="password"
+					placeholder="Mật khẩu"
+					class="w-full px-3 py-2 border rounded-lg">
+
+				<select name="role"
+					class="w-full px-3 py-2 border rounded-lg">
+
+					<option value="staff">Nhân viên</option>
+					<option value="po">PO</option>
+				</select>
+
+				<button type="submit"
+					class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700">
+
+					Tạo tài khoản
+				</button>
+
+			</form>
+
+		</div>
+	</div>
+
+	<div id="modal-edit-user"
+		class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[85] hidden flex items-center justify-center p-4">
+
+		<div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in">
+			<div class="flex items-center justify-between p-6 border-b">
+				<h2 class="text-xl font-bold">Sửa tài khoản</h2>
+
+				<button onclick="toggleModal('modal-edit-user', false)"
+					class="p-2 hover:bg-slate-100 rounded-full">
+					<i class="fas fa-times"></i>
+				</button>
+			</div>
+
+			<form id="edit-user-form" class="p-6 space-y-4">
+				<input type="hidden" id="edit-user-id">
+
+				<input id="edit-full-name"
+					placeholder="Họ tên"
+					class="w-full px-3 py-2 border rounded-lg">
+
+				<select id="edit-role"
+					class="w-full px-3 py-2 border rounded-lg">
+					<option value="staff">Nhân viên</option>
+					<option value="po">PO</option>
+				</select>
+
+				<select id="edit-active"
+					class="w-full px-3 py-2 border rounded-lg">
+					<option value="true">Hoạt động</option>
+					<option value="false">Đã khóa</option>
+				</select>
+
+				<button type="submit"
+					class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold">
+					Lưu thay đổi
+				</button>
+			</form>
+		</div>
+	</div>
+
+
+	<!-- Notification Panel -->
+	<div id="notification-panel"
+		class="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-[90] hidden p-4"
+		onclick="closeNotificationsPanel()">
+
+		<div class="ml-auto bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in"
+			onclick="event.stopPropagation()">
+
+			<div class="p-4 border-b border-slate-100 flex items-center justify-between gap-3">
+				<div>
+					<h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+						<i class="fas fa-bell text-blue-600"></i>
+						Thông báo
+					</h2>
+					<p class="text-xs text-slate-400 mt-1">
+						Theo dõi tài khoản tạo báo lỗi và cập nhật kết quả
+					</p>
+				</div>
+
+				<button onclick="closeNotificationsPanel()"
+					class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-red-50 hover:text-red-500 transition-all">
+					<i class="fas fa-times"></i>
+				</button>
+			</div>
+
+			<div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-2">
+				<div class="text-sm text-slate-500">
+					<span id="notification-count-text">0 thông báo</span>
+				</div>
+
+				<div class="flex gap-2">
+					<button onclick="markAllNotificationsRead()"
+						class="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-semibold hover:bg-blue-100">
+						Đã đọc hết
+					</button>
+
+					<button onclick="clearLocalNotificationsRead()"
+						class="text-xs bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg font-semibold hover:bg-slate-200">
+						Reset đã đọc
+					</button>
+				</div>
+			</div>
+
+			<div class="px-4 py-3 border-b border-slate-100 bg-slate-50">
+				<div class="flex items-center justify-between gap-3">
+					<div>
+						<div class="text-sm font-bold text-slate-700">Thông báo điện thoại</div>
+						<div id="push-status-text" class="text-xs text-slate-500 mt-0.5">Chưa bật Web Push</div>
+					</div>
+					<button onclick="enablePhonePushNotifications()"
+						id="enable-push-btn"
+						class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl font-bold whitespace-nowrap">
+						Bật thông báo
+					</button>
+				</div>
+			</div>
+			<div id="notification-list" class="max-h-[70vh] overflow-y-auto divide-y divide-slate-100">
+				<div class="p-6 text-center text-slate-400 text-sm">
+					Chưa có thông báo
+				</div>
+			</div>
+		</div>
+	</div>
+
+
+
+
+    <!-- Popup nổi: thông báo hàng lỗi mới -->
+    <div id="notification-toast-container"
+        class="fixed top-20 right-4 left-4 md:left-auto z-[9999] space-y-3 pointer-events-none"></div>
+
+
+
+
+    <!-- Nút nổi mobile: Báo lỗi mới -->
+    <button id="mobile-new-defect-btn"
+        onclick="toggleModal('modal-defect', true)"
+        class="bg-blue-600 hover:bg-blue-700 text-white md:hidden"
+        title="Báo lỗi mới"
+        aria-label="Báo lỗi mới">
+        <i class="fas fa-plus"></i>
+        <span class="mobile-fab-text">Báo lỗi</span>
+    </button>
+
+    <!-- Nút lên đầu trang -->
+    <button id="scroll-top-btn"
+        onclick="scrollToTop()"
+        class="bg-blue-600 hover:bg-blue-700 text-white"
+        title="Lên đầu trang"
+        aria-label="Lên đầu trang">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <script>
+        
+        const SUPABASE_URL = "https://fgujuuybphirvaebfgel.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWp1dXlicGhpcnZhZWJmZ2VsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwODEwNTAsImV4cCI6MjA4NjY1NzA1MH0.JJTnpEMvmOIUqCXFIJKx0yHCCNhmHc_wiMszw9UwkcI"; // Dán Anon Key của bạn vào đây
+        // Web Push: thay bằng VAPID public key của bạn sau khi tạo bằng lệnh: npx web-push generate-vapid-keys
+        const VAPID_PUBLIC_KEY = "BEvFCZMFzzESBkCKG1mMhgMl4u1z98Wy206w3-cbCTPRZopA-izDDdXcxW5091fCZz2lkOON8200tWKKOogwlWw";
+        
+        let supabaseClient;
+        try {
+            if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch (e) {
+            console.error("Lỗi khởi tạo Supabase:", e);
+        }
+
+        let defectsData = [];
+        let catalogData = [];
+		
+		let currentUser = null;
+		let currentRole = 'staff';
+		let currentDisplayName = 'Người dùng';
+		let notificationsData = [];
+		let notificationChannelReady = false;
+		let notificationChannel = null;
+		let activityLogsData = [];
+		let activityLogChannelReady = false;
+
+        const defectList = document.getElementById('defect-list');
+		const historyList = document.getElementById('history-list');
+		const catalogList = document.getElementById('catalog-list');
+		const catalogMobileList = document.getElementById('catalog-mobile-list');
+		const searchInput = document.getElementById('search-input');
+		const usersList = document.getElementById('users-list');
+		const usersMobileList = document.getElementById('users-mobile-list');
+		const catalogSearch = document.getElementById('catalog-search');
+		const historySearch = document.getElementById('history-search');
+		const usersSearch = document.getElementById('users-search');
+		const logsSearch = document.getElementById('logs-search');
+		
+		let appUsers = [];
+		let notificationPollingTimer = null;
+		let dataPollingTimer = null;
+
+        let appLoadingCount = 0;
+
+        function showAppLoading(title = 'Đang tải dữ liệu...', subtitle = 'Vui lòng chờ trong giây lát') {
+            appLoadingCount++;
+            const overlay = document.getElementById('app-loading-overlay');
+            const titleEl = document.getElementById('app-loading-title');
+            const subtitleEl = document.getElementById('app-loading-subtitle');
+
+            if (titleEl) titleEl.innerText = title;
+            if (subtitleEl) subtitleEl.innerText = subtitle;
+            if (overlay) overlay.classList.add('show');
+        }
+
+        function updateAppLoading(title, subtitle) {
+            const titleEl = document.getElementById('app-loading-title');
+            const subtitleEl = document.getElementById('app-loading-subtitle');
+            if (titleEl && title) titleEl.innerText = title;
+            if (subtitleEl && subtitle) subtitleEl.innerText = subtitle;
+        }
+
+        function hideAppLoading(force = false) {
+            if (force) appLoadingCount = 0;
+            else appLoadingCount = Math.max(0, appLoadingCount - 1);
+
+            if (appLoadingCount === 0) {
+                const overlay = document.getElementById('app-loading-overlay');
+                if (overlay) overlay.classList.remove('show');
+            }
+        }
+
+        async function withAppLoading(title, subtitle, task) {
+            showAppLoading(title, subtitle);
+            try {
+                return await task();
+            } finally {
+                hideAppLoading();
+            }
+        }
+
+        function setButtonLoading(button, isLoading, text) {
+            if (!button) return;
+            if (isLoading) {
+                button.dataset.oldText = button.innerText;
+                button.disabled = true;
+                button.innerText = text || 'Đang xử lý';
+                button.classList.add('btn-loading');
+            } else {
+                button.disabled = false;
+                button.innerText = button.dataset.oldText || button.innerText;
+                button.classList.remove('btn-loading');
+            }
+        }
+
+
+		async function fetchUsers() {
+
+			if (!isAdmin()) return;
+
+			const { data, error } = await supabaseClient
+				.from('app_users')
+				.select('*')
+				.order('created_at', { ascending: false });
+
+			if (!error) {
+				appUsers = data || [];
+				renderUsers();
+			}
+		}
+
+		async function deleteAllDefects() {
+			if (!isAdmin()) {
+				alert("Chỉ admin mới được xóa tất cả.");
+				return;
+			}
+
+			if (!confirm("Bạn chắc chắn muốn xóa TẤT CẢ báo cáo lỗi?")) return;
+			if (!confirm("Thao tác này không thể hoàn tác. Xác nhận lần cuối?")) return;
+
+			try {
+				const defectsWithImages = defectsData.filter(d => d.image_url);
+
+				if (defectsWithImages.length > 0) {
+					const filePaths = defectsWithImages.map(d => {
+						const urlParts = d.image_url.split('/');
+						const fileName = urlParts[urlParts.length - 1];
+						return `defects/${fileName}`;
+					});
+
+					await supabaseClient.storage
+						.from('defect-images')
+						.remove(filePaths);
+				}
+
+				const { error } = await supabaseClient
+					.from('defects')
+					.delete()
+					.neq('id', '00000000-0000-0000-0000-000000000000');
+
+				if (error) throw error;
+
+				await createActivityLog('delete', 'defects', null, 'Xóa tất cả báo cáo lỗi', { count: defectsData.length });
+
+				alert("Đã xóa tất cả báo cáo lỗi.");
+				await fetchDefects();
+
+			} catch (error) {
+				alert("Lỗi khi xóa tất cả: " + error.message);
+			}
+		}
+
+		async function toggleUserStatus(id, currentStatus) {
+
+			const { error } = await supabaseClient
+				.from('app_users')
+				.update({
+					active: !currentStatus
+				})
+				.eq('id', id);
+
+			if (!error) {
+				await createActivityLog('update', 'app_users', id, 'Đổi trạng thái tài khoản', { active: !currentStatus });
+				fetchUsers();
+			}
+		}
+
+		async function deleteUser(id) {
+
+			if (!confirm('Xác nhận xóa tài khoản?')) return;
+
+			const { error } = await supabaseClient
+				.from('app_users')
+				.delete()
+				.eq('id', id);
+
+			if (!error) {
+				await createActivityLog('delete', 'app_users', id, 'Xóa tài khoản nội bộ', { id });
+				fetchUsers();
+			}
+		}
+		
+        async function init() {
+			if (!supabaseClient) {
+				updateStatusUI('offline');
+				return;
+			}
+			updateStatusUI('connecting');
+			showAppLoading('Đang kết nối hệ thống...', 'Đang tải báo cáo lỗi và danh mục');
+			
+			try {
+				// Chỉ tải dữ liệu công khai ban đầu. Thông báo sẽ tải sau khi đăng nhập xong
+				// để tránh Auth/Anon bị lệch quyền và tránh lỗi WebSocket.
+				await Promise.all([fetchDefects(), fetchCatalog()]);
+				updateStatusUI('online');
+			} finally {
+				hideAppLoading(true);
+			}
+		}
+
+        async function fetchDefects() {
+            const { data, error } = await supabaseClient.from('defects').select('*').order('created_at', { ascending: false });
+            if (!error) { 
+				defectsData = data || []; 
+				renderDashboard();
+				renderHistory();
+				updateStats();
+			}
+        }
+
+        async function fetchCatalog() {
+            const { data, error } = await supabaseClient.from('catalog').select('*');
+            if (!error) { catalogData = data || []; renderCatalog(); }
+        }
+
+        function getCurrentAccountKey() {
+            if (!currentUser) return 'guest';
+
+            return String(
+                currentUser.username ||
+                currentUser.email ||
+                currentUser.id ||
+                'guest'
+            ).toLowerCase();
+        }
+
+        function getNotificationReadKey() {
+            return `notification_read_${getCurrentAccountKey()}`;
+        }
+
+        function getReadNotificationIds() {
+            try {
+                return JSON.parse(localStorage.getItem(getNotificationReadKey()) || '[]');
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function setReadNotificationIds(ids) {
+            localStorage.setItem(
+                getNotificationReadKey(),
+                JSON.stringify([...new Set(ids)])
+            );
+        }
+
+        function isNotificationRead(id) {
+            return getReadNotificationIds().includes(String(id));
+        }
+
+        function getNotificationSeenKey() {
+            return `notification_seen_${getCurrentAccountKey()}`;
+        }
+
+        function getSeenNotificationIds() {
+            try {
+                return JSON.parse(localStorage.getItem(getNotificationSeenKey()) || '[]');
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function setSeenNotificationIds(ids) {
+            localStorage.setItem(
+                getNotificationSeenKey(),
+                JSON.stringify([...new Set(ids.map(String))])
+            );
+        }
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        function isPushConfigured() {
+            return !!VAPID_PUBLIC_KEY && !VAPID_PUBLIC_KEY.includes('THAY_');
+        }
+
+        async function getServiceWorkerRegistration() {
+            if (!('serviceWorker' in navigator)) {
+                throw new Error('Trình duyệt này chưa hỗ trợ Service Worker.');
+            }
+            return await navigator.serviceWorker.register('../service-worker.js');
+        }
+
+        async function savePushSubscription(subscription) {
+            if (!subscription || !supabaseClient || !currentUser) return;
+
+            const json = subscription.toJSON();
+            const accountKey = getCurrentAccountKey();
+
+            const payload = {
+                endpoint: json.endpoint,
+                p256dh: json.keys?.p256dh || '',
+                auth: json.keys?.auth || '',
+                user_key: accountKey,
+                username: currentUser.username || currentUser.email || currentUser.id || '',
+                display_name: currentDisplayName || '',
+                user_role: currentRole || 'staff',
+                user_agent: navigator.userAgent || '',
+                active: true,
+                updated_at: new Date().toISOString()
+            };
+
+            const { error } = await supabaseClient
+                .from('push_subscriptions')
+                .upsert(payload, { onConflict: 'endpoint' });
+
+            if (error) throw error;
+        }
+
+        async function syncExistingPushSubscription() {
+            try {
+                if (!isPushConfigured() || Notification.permission !== 'granted') return;
+                const registration = await getServiceWorkerRegistration();
+                const existing = await registration.pushManager.getSubscription();
+                if (existing) await savePushSubscription(existing);
+                updatePushStatusUI();
+            } catch (error) {
+                console.warn('Không đồng bộ được push subscription:', error.message);
+            }
+        }
+
+        async function enablePhonePushNotifications() {
+            try {
+                if (!window.isSecureContext) {
+                    alert('Web Push cần chạy bằng HTTPS hoặc localhost. Hãy upload web lên hosting HTTPS trước.');
+                    return;
+                }
+
+                if (!('Notification' in window) || !('PushManager' in window)) {
+                    alert('Trình duyệt này chưa hỗ trợ Web Push Notification. Nên dùng Chrome/Edge Android hoặc PWA trên iOS 16.4+.');
+                    return;
+                }
+
+                if (!isPushConfigured()) {
+                    alert('Bạn chưa điền VAPID_PUBLIC_KEY trong file hang-loi/index.html. Hãy tạo khóa VAPID rồi thay vào trước.');
+                    return;
+                }
+
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    updatePushStatusUI();
+                    alert('Bạn chưa cấp quyền thông báo cho web/app.');
+                    return;
+                }
+
+                const registration = await getServiceWorkerRegistration();
+                let subscription = await registration.pushManager.getSubscription();
+
+                if (!subscription) {
+                    subscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                    });
+                }
+
+                await savePushSubscription(subscription);
+                updatePushStatusUI('Đã bật thông báo điện thoại cho thiết bị này');
+
+                registration.showNotification('Đã bật thông báo', {
+                    body: 'Thiết bị này sẽ nhận thông báo khi có hàng lỗi mới.',
+                    icon: '/icons/icon-192.png',
+                    badge: '/icons/icon-192.png',
+                    data: { url: '/hang-loi/' }
+                });
+            } catch (error) {
+                console.warn('Lỗi bật Web Push:', error);
+                updatePushStatusUI('Lỗi bật thông báo: ' + error.message);
+                alert('Lỗi bật thông báo: ' + error.message);
+            }
+        }
+
+        function updatePushStatusUI(customText) {
+            const statusEl = document.getElementById('push-status-text');
+            const btn = document.getElementById('enable-push-btn');
+            if (!statusEl || !btn) return;
+
+            if (!('Notification' in window) || !('PushManager' in window)) {
+                statusEl.innerText = 'Thiết bị/trình duyệt chưa hỗ trợ Web Push';
+                btn.disabled = true;
+                btn.classList.add('opacity-60');
+                return;
+            }
+
+            if (customText) {
+                statusEl.innerText = customText;
+                return;
+            }
+
+            if (!isPushConfigured()) {
+                statusEl.innerText = 'Chưa cấu hình VAPID key';
+                return;
+            }
+
+            if (Notification.permission === 'granted') {
+                statusEl.innerText = 'Đã cấp quyền thông báo';
+                btn.innerText = 'Bật lại';
+            } else if (Notification.permission === 'denied') {
+                statusEl.innerText = 'Đang bị chặn thông báo trong trình duyệt';
+            } else {
+                statusEl.innerText = 'Chưa bật thông báo trên thiết bị này';
+            }
+        }
+
+        async function sendWebPushForNotification(notification) {
+            if (!notification || notification.type !== 'defect_created') return;
+
+            try {
+                const { error } = await supabaseClient.functions.invoke('send-push', {
+                    body: {
+                        notification_id: notification.id,
+                        title: notification.title || 'Có hàng lỗi mới',
+                        body: notification.message || `${notification.product_name || 'Sản phẩm'} vừa được báo lỗi`,
+                        url: '/hang-loi/',
+                        type: notification.type,
+                        product_name: notification.product_name || '',
+                        sku: notification.sku || '',
+                        barcode: notification.barcode || '',
+                        defect_id: notification.defect_id || null
+                    }
+                });
+
+                if (error) console.warn('Chưa gửi được Web Push:', error.message);
+            } catch (error) {
+                console.warn('Edge Function send-push chưa sẵn sàng hoặc bị lỗi:', error.message);
+            }
+        }
+
+        function playNotificationBeep() {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+
+                const ctx = new AudioCtx();
+                const oscillator = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+                gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.22);
+
+                oscillator.connect(gain);
+                gain.connect(ctx.destination);
+                oscillator.start();
+                oscillator.stop(ctx.currentTime + 0.24);
+
+                setTimeout(() => ctx.close?.(), 350);
+            } catch (e) {
+                console.warn('Không phát được âm báo:', e.message);
+            }
+        }
+
+        function showNewDefectToast(n) {
+            const container = document.getElementById('notification-toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = 'pointer-events-auto ml-auto w-full md:w-[360px] bg-white border border-blue-100 shadow-2xl rounded-2xl p-4 animate-in cursor-pointer';
+
+            toast.innerHTML = `
+                <div class="flex gap-3">
+                    <div class="w-11 h-11 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="font-extrabold text-slate-800 leading-snug">
+                                ${escapeHtml(n.title || 'Có hàng lỗi mới')}
+                            </div>
+                            <button type="button" class="text-slate-400 hover:text-red-500 shrink-0 px-1">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="text-sm text-slate-600 mt-1 leading-relaxed">
+                            ${escapeHtml(n.product_name || 'Sản phẩm mới được báo lỗi')}
+                            ${n.sku ? `<span class="font-mono text-blue-600"> - ITEM: ${escapeHtml(n.sku)}</span>` : ''}
+                        </div>
+                        <div class="text-xs text-slate-400 mt-1">
+                            ${escapeHtml(n.actor_name || n.actor_username || 'Người dùng')} vừa tạo báo cáo lỗi
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            toast.onclick = () => {
+                markNotificationRead(n.id);
+                toggleNotificationsPanel();
+                toast.remove();
+            };
+
+            const closeBtn = toast.querySelector('button');
+            if (closeBtn) {
+                closeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    toast.remove();
+                };
+            }
+
+            container.appendChild(toast);
+
+            if (navigator.vibrate) {
+                navigator.vibrate([180, 80, 180]);
+            }
+
+            playNotificationBeep();
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-8px)';
+                toast.style.transition = 'all .2s ease';
+                setTimeout(() => toast.remove(), 220);
+            }, 8000);
+        }
+
+        function checkAndShowNewNotificationToasts(newData) {
+            if (!Array.isArray(newData) || !currentUser) return;
+
+            const seenIds = getSeenNotificationIds();
+
+            // Lần đầu đăng nhập/chạy app: đánh dấu đã thấy để không bung lại hàng loạt thông báo cũ.
+            if (seenIds.length === 0) {
+                setSeenNotificationIds(newData.map(n => n.id).filter(Boolean));
+                return;
+            }
+
+            const newItems = newData
+                .filter(n => n && n.id && !seenIds.includes(String(n.id)))
+                .sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+
+            if (newItems.length === 0) return;
+
+            const updatedSeenIds = [...seenIds, ...newItems.map(n => String(n.id))];
+            setSeenNotificationIds(updatedSeenIds);
+
+            newItems
+                .filter(n => n.type === 'defect_created')
+                .slice(-3)
+                .forEach(n => showNewDefectToast(n));
+        }
+
+        async function fetchNotifications(showErrorInPanel = true) {
+            if (!supabaseClient || !currentUser) return;
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('notifications')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(100);
+
+                if (error) {
+                    console.warn('Chưa đọc được bảng notifications:', error.message, error);
+                    notificationsData = [];
+                    renderNotifications();
+                    if (showErrorInPanel) showNotificationReadError(error);
+                    return;
+                }
+
+                const freshNotifications = data || [];
+                checkAndShowNewNotificationToasts(freshNotifications);
+                notificationsData = freshNotifications;
+                renderNotifications();
+            } catch (error) {
+                console.warn('Lỗi tải thông báo:', error.message, error);
+                notificationsData = [];
+                renderNotifications();
+                if (showErrorInPanel) showNotificationReadError(error);
+            }
+        }
+
+        function showNotificationReadError(error) {
+            const list = document.getElementById('notification-list');
+            const countText = document.getElementById('notification-count-text');
+            const badge = document.getElementById('notification-badge');
+            if (countText) countText.innerText = 'Không đọc được thông báo';
+            if (badge) {
+                badge.classList.add('hidden');
+                badge.classList.remove('flex');
+            }
+            if (!list) return;
+            list.innerHTML = `
+                <div class="p-4 bg-red-50 text-red-700 text-sm leading-relaxed">
+                    <div class="font-bold mb-1">Tài khoản này chưa đọc được bảng notifications.</div>
+                    <div>${escapeHtml(error?.message || 'Lỗi không xác định')}</div>
+                    <div class="mt-2 text-xs text-red-500">Thường do RLS policy của Supabase chưa cấp quyền SELECT cho role authenticated. Hãy chạy lại SQL tạo bảng/policy ở phần hướng dẫn.</div>
+                </div>
+            `;
+        }
+
+        function stopAutoRefresh() {
+            if (notificationPollingTimer) clearInterval(notificationPollingTimer);
+            if (dataPollingTimer) clearInterval(dataPollingTimer);
+            notificationPollingTimer = null;
+            dataPollingTimer = null;
+        }
+
+        function startAutoRefresh() {
+            stopAutoRefresh();
+
+            // Không dùng Supabase Realtime WebSocket nữa vì trình duyệt/mạng đang đóng WS trước khi kết nối.
+            // Dùng polling để tài khoản app_users và Supabase Authentication đều cập nhật ổn định.
+            notificationPollingTimer = setInterval(() => {
+                if (currentUser) fetchNotifications(false);
+            }, 10000);
+
+            dataPollingTimer = setInterval(() => {
+                if (!currentUser) return;
+                fetchDefects();
+                fetchCatalog();
+                if (isAdmin()) fetchActivityLogs();
+            }, 20000);
+        }
+
+        async function setupNotificationRealtime() {
+            // Đã tắt realtime notifications để tránh lỗi WebSocket closed before connection is established.
+            return;
+        }
+
+        async function refreshNotificationsAfterLogin() {
+            await fetchNotifications(true);
+            updatePushStatusUI();
+            await syncExistingPushSubscription();
+            startAutoRefresh();
+        }
+
+
+        async function createActivityLog(action, targetType, targetId, description, details = {}) {
+            if (!supabaseClient || !currentUser) return;
+
+            const actorName = currentDisplayName || currentUser.full_name || currentUser.username || currentUser.email || 'Người dùng';
+            const actorUsername = currentUser.username || currentUser.email || currentUser.id || '';
+
+            try {
+                const { error } = await supabaseClient
+                    .from('activity_logs')
+                    .insert([{
+                        action,
+                        target_type: targetType,
+                        target_id: targetId ? String(targetId) : null,
+                        description,
+                        actor_username: actorUsername,
+                        actor_name: actorName,
+                        actor_role: currentRole || 'staff',
+                        details
+                    }]);
+
+                if (error) {
+                    console.warn('Chưa ghi được activity_logs:', error.message);
+                }
+            } catch (error) {
+                console.warn('Lỗi ghi nhật ký:', error.message);
+            }
+        }
+
+        async function fetchActivityLogs() {
+            if (!supabaseClient || !isAdmin()) return;
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('activity_logs')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(300);
+
+                if (error) {
+                    console.warn('Chưa đọc được bảng activity_logs:', error.message);
+                    activityLogsData = [];
+                    renderActivityLogs();
+                    return;
+                }
+
+                activityLogsData = data || [];
+                renderActivityLogs();
+            } catch (error) {
+                console.warn('Lỗi tải nhật ký:', error.message);
+            }
+        }
+
+        function setupActivityLogRealtime() {
+            // Đã tắt realtime activity_logs để tránh lỗi WebSocket.
+            return;
+        }
+
+        function getLogActionText(action) {
+            const map = {
+                login: 'Đăng nhập',
+                logout: 'Đăng xuất',
+                create: 'Thêm mới',
+                update: 'Cập nhật/Sửa',
+                delete: 'Xóa',
+                import: 'Nhập Excel'
+            };
+            return map[action] || action || '-';
+        }
+
+        function getLogActionClass(action) {
+            if (action === 'login') return 'bg-blue-50 text-blue-700 border-blue-200';
+            if (action === 'logout') return 'bg-slate-50 text-slate-700 border-slate-200';
+            if (action === 'create' || action === 'import') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+            if (action === 'update') return 'bg-orange-50 text-orange-700 border-orange-200';
+            if (action === 'delete') return 'bg-red-50 text-red-700 border-red-200';
+            return 'bg-slate-50 text-slate-700 border-slate-200';
+        }
+
+        function formatLogDetails(details) {
+            if (!details || typeof details !== 'object') return '-';
+
+            const pairs = Object.entries(details)
+                .filter(([_, value]) => value !== undefined && value !== null && value !== '')
+                .slice(0, 8)
+                .map(([key, value]) => {
+                    let textValue = value;
+                    if (typeof value === 'object') textValue = JSON.stringify(value);
+                    return `${key}: ${String(textValue)}`;
+                });
+
+            return pairs.length ? pairs.join(' | ') : '-';
+        }
+
+        function getFilteredActivityLogs() {
+            const query = (logsSearch?.value || '').toLowerCase().trim();
+            const actionFilter = document.getElementById('logs-action-filter')?.value || 'All';
+
+            return activityLogsData.filter(log => {
+                const detailsText = formatLogDetails(log.details || {}).toLowerCase();
+                const searchStr = `${log.actor_username || ''} ${log.actor_name || ''} ${log.actor_role || ''} ${log.action || ''} ${log.target_type || ''} ${log.description || ''} ${detailsText}`.toLowerCase();
+                const matchSearch = !query || searchStr.includes(query);
+                const matchAction = actionFilter === 'All' || log.action === actionFilter;
+                return matchSearch && matchAction;
+            });
+        }
+
+        function renderActivityLogs() {
+            const list = document.getElementById('logs-list');
+            const mobileList = document.getElementById('logs-mobile-list');
+            if (!list || !mobileList) return;
+
+            if (!isAdmin()) {
+                list.innerHTML = '';
+                mobileList.innerHTML = '';
+                return;
+            }
+
+            const rows = getFilteredActivityLogs();
+
+            if (rows.length === 0) {
+                list.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-slate-400">Chưa có nhật ký hoặc chưa tạo bảng activity_logs</td></tr>`;
+                mobileList.innerHTML = `<div class="bg-white border border-slate-200 rounded-2xl p-6 text-center text-slate-400 text-sm">Chưa có nhật ký hoặc chưa tạo bảng activity_logs</div>`;
+                return;
+            }
+
+            list.innerHTML = rows.map(log => `
+                <tr class="hover:bg-slate-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-xs font-medium text-slate-600">${formatDateTime(log.created_at)}</td>
+                    <td class="px-6 py-4">
+                        <div class="font-semibold text-slate-800">${log.actor_name || '-'}</div>
+                        <div class="text-xs text-slate-400 font-mono">${log.actor_username || '-'}</div>
+                        <div class="text-[10px] text-blue-600 font-bold uppercase">${log.actor_role || '-'}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center rounded-lg border px-3 py-1 text-xs font-bold ${getLogActionClass(log.action)}">${getLogActionText(log.action)}</span>
+                    </td>
+                    <td class="px-6 py-4 text-sm font-mono text-slate-600">${log.target_type || '-'}</td>
+                    <td class="px-6 py-4 text-sm text-slate-700">${log.description || '-'}</td>
+                    <td class="px-6 py-4 text-xs text-slate-500 max-w-[320px] break-words">${formatLogDetails(log.details || {})}</td>
+                </tr>
+            `).join('');
+
+            mobileList.innerHTML = rows.map(log => `
+                <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <div class="font-bold text-slate-800">${log.actor_name || '-'}</div>
+                            <div class="text-xs text-slate-400 font-mono">${log.actor_username || '-'}</div>
+                        </div>
+                        <span class="rounded-lg border px-2 py-1 text-[11px] font-bold ${getLogActionClass(log.action)}">${getLogActionText(log.action)}</span>
+                    </div>
+                    <div class="mt-2 text-xs text-slate-500">${formatDateTime(log.created_at)}</div>
+                    <div class="mt-3 text-sm font-semibold text-slate-700">${log.description || '-'}</div>
+                    <div class="mt-2 text-xs text-slate-500 break-words">${formatLogDetails(log.details || {})}</div>
+                </div>
+            `).join('');
+        }
+
+        function notificationIcon(type) {
+            if (type === 'defect_created') return 'fa-circle-plus text-blue-600 bg-blue-50';
+            if (type === 'defect_resolved') return 'fa-circle-check text-green-600 bg-green-50';
+            return 'fa-bell text-slate-600 bg-slate-100';
+        }
+
+        function renderNotifications() {
+            const list = document.getElementById('notification-list');
+            const badge = document.getElementById('notification-badge');
+            const countText = document.getElementById('notification-count-text');
+
+            if (!list || !badge || !countText) return;
+
+            const unreadCount = notificationsData.filter(n => !isNotificationRead(n.id)).length;
+
+            countText.innerText = `${notificationsData.length} thông báo`;
+
+            if (unreadCount > 0) {
+                badge.innerText = unreadCount > 99 ? '99+' : unreadCount;
+                badge.classList.remove('hidden');
+                badge.classList.add('flex');
+            } else {
+                badge.classList.add('hidden');
+                badge.classList.remove('flex');
+            }
+
+            if (notificationsData.length === 0) {
+                list.innerHTML = `
+                    <div class="p-6 text-center text-slate-400 text-sm">
+                        Chưa có thông báo
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = notificationsData.map(n => {
+                const read = isNotificationRead(n.id);
+                const iconClass = notificationIcon(n.type);
+
+                return `
+                    <div onclick="markNotificationRead('${n.id}')"
+                        class="p-4 cursor-pointer hover:bg-slate-50 transition-colors ${read ? 'bg-white' : 'bg-blue-50/60'}">
+
+                        <div class="flex gap-3">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${iconClass.split(' ').slice(1).join(' ')}">
+                                <i class="fas ${iconClass.split(' ')[0]}"></i>
+                            </div>
+
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between gap-2">
+                                    <div class="font-bold text-sm text-slate-800 leading-snug">
+                                        ${escapeHtml(n.title || 'Thông báo')}
+                                    </div>
+
+                                    ${read ? '' : '<span class="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0 mt-1"></span>'}
+                                </div>
+
+                                <div class="text-sm text-slate-600 mt-1 leading-relaxed">
+                                    ${escapeHtml(n.message || '')}
+                                </div>
+
+                                <div class="flex flex-wrap gap-1 mt-2">
+                                    ${n.product_name ? `<span class="text-[11px] bg-white border text-slate-600 px-2 py-0.5 rounded-full">${escapeHtml(n.product_name)}</span>` : ''}
+                                    ${n.sku ? `<span class="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-mono">ITEM: ${escapeHtml(n.sku)}</span>` : ''}
+                                    ${n.barcode ? `<span class="text-[11px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-mono">BC: ${escapeHtml(n.barcode)}</span>` : ''}
+                                </div>
+
+                                <div class="text-[11px] text-slate-400 mt-2">
+                                    ${formatDateTime(n.created_at)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleNotificationsPanel() {
+            const panel = document.getElementById('notification-panel');
+            if (!panel) return;
+
+            panel.classList.toggle('hidden');
+            fetchNotifications();
+        }
+
+        function closeNotificationsPanel() {
+            const panel = document.getElementById('notification-panel');
+            if (panel) panel.classList.add('hidden');
+        }
+
+        function markNotificationRead(id) {
+            const ids = getReadNotificationIds();
+            ids.push(String(id));
+            setReadNotificationIds(ids);
+            renderNotifications();
+        }
+
+        function markAllNotificationsRead() {
+            setReadNotificationIds(notificationsData.map(n => String(n.id)));
+            renderNotifications();
+        }
+
+        function clearLocalNotificationsRead() {
+            localStorage.removeItem(getNotificationReadKey());
+            renderNotifications();
+        }
+
+        async function createNotification(type, defect, extra = {}) {
+            if (!supabaseClient || !currentUser) return;
+
+            const actorName = currentDisplayName || currentUser.full_name || currentUser.username || currentUser.email || 'Người dùng';
+            const actorUsername = currentUser.username || currentUser.email || currentUser.id || '';
+
+            let title = 'Thông báo mới';
+            let message = '';
+
+            if (type === 'defect_created') {
+                title = 'Có hàng lỗi mới';
+                message = `${actorName} vừa cập nhật hàng lỗi mới: ${defect.product_name || 'N/A'}`;
+            }
+
+            if (type === 'defect_resolved') {
+                title = 'Hàng lỗi đã được giải quyết';
+                message = `${actorName} đã cập nhật kết quả Xong cho: ${defect.product_name || 'N/A'}`;
+            }
+
+            try {
+                const { data: insertedNotification, error } = await supabaseClient
+                    .from('notifications')
+                    .insert([{
+                        type,
+                        title,
+                        message,
+                        actor_username: String(actorUsername),
+                        actor_name: actorName,
+                        product_name: defect.product_name || '',
+                        sku: defect.sku || '',
+                        barcode: defect.barcode || '',
+                        defect_id: defect.id || null,
+                        status: extra.status || defect.status || null
+                    }])
+                    .select()
+                    .single();
+
+                if (error) {
+                    console.warn('Không tạo được thông báo:', error.message);
+                    return;
+                }
+
+                await sendWebPushForNotification(insertedNotification);
+                await fetchNotifications();
+            } catch (error) {
+                console.warn('Lỗi tạo thông báo:', error.message);
+            }
+        }
+
+		function openEditUserModal(id) {
+			const user = appUsers.find(u => u.id === id);
+			if (!user) return;
+
+			document.getElementById('edit-user-id').value = user.id;
+			document.getElementById('edit-full-name').value = user.full_name || '';
+			document.getElementById('edit-role').value = user.role || 'staff';
+			document.getElementById('edit-active').value = String(user.active);
+
+			toggleModal('modal-edit-user', true);
+		}
+
+		document.getElementById('edit-user-form').onsubmit = async (e) => {
+			e.preventDefault();
+
+			const id = document.getElementById('edit-user-id').value;
+
+			const payload = {
+				full_name: document.getElementById('edit-full-name').value.trim(),
+				role: document.getElementById('edit-role').value,
+				active: document.getElementById('edit-active').value === 'true'
+			};
+
+			const { error } = await supabaseClient
+				.from('app_users')
+				.update(payload)
+				.eq('id', id);
+
+			if (error) {
+				alert("Lỗi cập nhật tài khoản: " + error.message);
+				return;
+			}
+
+			await createActivityLog('update', 'app_users', id, 'Sửa tài khoản nội bộ', payload);
+
+			toggleModal('modal-edit-user', false);
+			await fetchUsers();
+		};
+
+		function isAdmin() {
+			return currentRole === 'admin';
+		}
+
+		function isPO() {
+			return currentRole === 'po';
+		}
+
+		function canManageData() {
+			return currentRole === 'admin' || currentRole === 'po';
+		}
+
+		function updateHelloUser() {
+
+			const el = document.getElementById('hello-user');
+
+			if (!el) return;
+
+			el.innerText = currentDisplayName || 'Người dùng';
+		}
+
+
+        const tableSortState = {
+            dashboard: { key: 'created_at', direction: 'desc' },
+            history: { key: 'created_at', direction: 'desc' },
+            catalog: { key: 'product_name', direction: 'asc' },
+            users: { key: 'created_at', direction: 'desc' }
+        };
+
+        const tableFilterState = {
+            dashboard: {},
+            history: {},
+            catalog: {},
+            users: {}
+        };
+
+        const FILTER_BLANK_VALUE = '__FILTER_BLANK__';
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function getFilterValue(row, key) {
+            if (!row) return FILTER_BLANK_VALUE;
+
+            if (key === 'status') {
+                return row.status ? getStatusText(row.status) : FILTER_BLANK_VALUE;
+            }
+
+            if (key === 'active') {
+                return row.active ? 'Hoạt động' : 'Đã khóa';
+            }
+
+            if (key === 'created_at') {
+                return row.created_at ? formatDateTime(row.created_at) : FILTER_BLANK_VALUE;
+            }
+
+            const value = row[key];
+            if (value === null || value === undefined || String(value).trim() === '') {
+                return FILTER_BLANK_VALUE;
+            }
+
+            return String(value).trim();
+        }
+
+        function getFilterLabel(value) {
+            return value === FILTER_BLANK_VALUE ? '(Trống)' : value;
+        }
+
+        function getSearchFilteredRows(tableName) {
+            if (tableName === 'dashboard') {
+                const query = (searchInput?.value || '').toLowerCase().trim();
+                const statusFilter = document.getElementById('filter-status')?.value || 'All';
+
+                return defectsData.filter(d => {
+                    if (d.status === 'Resolved') return false;
+
+                    const searchStr = `${d.product_name || ''} ${d.sku || ''} ${d.barcode || ''} ${d.vendor_name || ''} ${d.vendor_id || ''} ${d.defect_type || ''}`.toLowerCase();
+
+                    let matchSearch = true;
+                    if (query) {
+                        if (query.includes('*')) {
+                            const pattern = wildcardToRegex(query);
+                            matchSearch = pattern.test(d.product_name || '') || pattern.test(d.barcode || '') || pattern.test(d.sku || '') || pattern.test(d.vendor_name || '') || pattern.test(d.vendor_id || '') || pattern.test(d.defect_type || '');
+                        } else {
+                            matchSearch = searchStr.includes(query);
+                        }
+                    }
+
+                    const matchStatus = statusFilter === 'All' || d.status === statusFilter;
+                    return matchSearch && matchStatus;
+                });
+            }
+
+            if (tableName === 'history') {
+                const query = (historySearch?.value || '').toLowerCase().trim();
+                return defectsData.filter(d => {
+                    if (d.status !== 'Resolved') return false;
+                    const searchStr = `${d.product_name || ''} ${d.sku || ''} ${d.barcode || ''} ${d.vendor_name || ''} ${d.vendor_id || ''} ${d.defect_type || ''}`.toLowerCase();
+                    return searchStr.includes(query);
+                });
+            }
+
+            if (tableName === 'catalog') {
+                const query = (catalogSearch?.value || '').toLowerCase().trim();
+                return catalogData.filter(c => {
+                    const searchStr = `${c.barcode || ''} ${c.product_name || ''} ${c.sku || ''} ${c.vendor_name || ''} ${c.vendor_id || ''}`.toLowerCase();
+                    return searchStr.includes(query);
+                });
+            }
+
+            if (tableName === 'users') {
+                const query = (usersSearch?.value || '').toLowerCase().trim();
+                return appUsers.filter(u => {
+                    const searchStr = `${u.username || ''} ${u.full_name || ''} ${u.role || ''} ${u.active ? 'Hoạt động' : 'Đã khóa'}`.toLowerCase();
+                    return searchStr.includes(query);
+                });
+            }
+
+            return [];
+        }
+
+        function applyTableFilters(rows, tableName, exceptKey = null) {
+            const filters = tableFilterState[tableName] || {};
+
+            return rows.filter(row => {
+                return Object.entries(filters).every(([key, selected]) => {
+                    if (key === exceptKey) return true;
+                    if (!selected || selected.length === 0) return true;
+                    return selected.includes(getFilterValue(row, key));
+                });
+            });
+        }
+
+        function getFilterValues(tableName, key) {
+            const rows = applyTableFilters(getSearchFilteredRows(tableName), tableName, key);
+            const values = [...new Set(rows.map(row => getFilterValue(row, key)))];
+
+            return values.sort((a, b) => getFilterLabel(a).localeCompare(getFilterLabel(b), 'vi', {
+                numeric: true,
+                sensitivity: 'base'
+            }));
+        }
+
+        function closeExcelFilters() {
+            document.querySelectorAll('.excel-filter-menu').forEach(menu => menu.classList.add('hidden'));
+        }
+
+        function enhanceExcelFilters() {
+            document.querySelectorAll('th.sortable-th').forEach(th => {
+                if (th.dataset.filterEnhanced === '1') return;
+
+                const onclick = th.getAttribute('onclick') || '';
+                const match = onclick.match(/sortTable\('([^']+)',\s*'([^']+)'\)/);
+                if (!match) return;
+
+                const tableName = match[1];
+                const key = match[2];
+                const oldButton = th.querySelector('button');
+                if (oldButton) {
+                    oldButton.classList.add('pr-8');
+                }
+
+                const filterBtn = document.createElement('button');
+                filterBtn.type = 'button';
+                filterBtn.className = 'excel-filter-btn';
+                filterBtn.id = `filter-btn-${tableName}-${key}`;
+                filterBtn.title = 'Lọc giống Excel';
+                filterBtn.innerHTML = '<i class="fas fa-filter text-xs"></i>';
+                filterBtn.onclick = (event) => {
+                    event.stopPropagation();
+                    openExcelFilter(tableName, key);
+                };
+
+                const menu = document.createElement('div');
+                menu.id = `filter-menu-${tableName}-${key}`;
+                menu.className = 'excel-filter-menu hidden';
+                menu.onclick = (event) => event.stopPropagation();
+
+                th.appendChild(filterBtn);
+                th.appendChild(menu);
+                th.dataset.filterEnhanced = '1';
+            });
+
+            document.addEventListener('click', closeExcelFilters);
+        }
+
+        function openExcelFilter(tableName, key) {
+            const menuId = `filter-menu-${tableName}-${key}`;
+            const menu = document.getElementById(menuId);
+            if (!menu) return;
+
+            const wasHidden = menu.classList.contains('hidden');
+            closeExcelFilters();
+            if (!wasHidden) return;
+
+            const values = getFilterValues(tableName, key);
+            const currentSelected = tableFilterState[tableName]?.[key] || [];
+            const selectedSet = new Set(currentSelected.length ? currentSelected : values);
+            const isAllChecked = values.length > 0 && values.every(value => selectedSet.has(value));
+
+            menu.innerHTML = `
+                <div class="flex items-center justify-between gap-2 mb-2">
+                    <div class="font-bold text-slate-700 text-sm">Lọc dữ liệu</div>
+                    <button type="button" onclick="event.stopPropagation(); clearExcelFilter('${tableName}', '${key}')" class="text-xs text-blue-600 hover:underline">Hiện tất cả</button>
+                </div>
+
+                <input type="text"
+                    placeholder="Tìm trong danh sách lọc..."
+                    class="w-full mb-2 px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    oninput="filterExcelMenuOptions(this)">
+
+                <label class="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-slate-50 text-sm font-semibold text-slate-700 border-b border-slate-100 mb-1">
+                    <input type="checkbox" class="excel-select-all" ${isAllChecked ? 'checked' : ''} onchange="toggleExcelSelectAll(this)">
+                    <span>Select All</span>
+                </label>
+
+                <div class="excel-filter-option-list space-y-1">
+                    ${values.map(value => `
+                        <label class="excel-filter-option flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 text-sm text-slate-700">
+                            <input type="checkbox" class="excel-filter-checkbox" value="${escapeHtml(value)}" ${selectedSet.has(value) ? 'checked' : ''} onchange="syncExcelSelectAll(this)">
+                            <span class="truncate" title="${escapeHtml(getFilterLabel(value))}">${escapeHtml(getFilterLabel(value))}</span>
+                        </label>
+                    `).join('') || '<div class="text-sm text-slate-400 px-2 py-3">Không có dữ liệu</div>'}
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="event.stopPropagation(); closeExcelFilters()" class="py-2 rounded-lg bg-slate-100 text-slate-700 font-semibold text-sm">Hủy</button>
+                    <button type="button" onclick="event.stopPropagation(); applyExcelFilter('${tableName}', '${key}')" class="py-2 rounded-lg bg-blue-600 text-white font-semibold text-sm">Áp dụng</button>
+                </div>
+            `;
+
+            menu.classList.remove('hidden');
+        }
+
+        function filterExcelMenuOptions(input) {
+            const query = input.value.toLowerCase().trim();
+            const menu = input.closest('.excel-filter-menu');
+            if (!menu) return;
+
+            menu.querySelectorAll('.excel-filter-option').forEach(option => {
+                const text = option.innerText.toLowerCase();
+                option.style.display = text.includes(query) ? 'flex' : 'none';
+            });
+        }
+
+        function toggleExcelSelectAll(checkbox) {
+            const menu = checkbox.closest('.excel-filter-menu');
+            if (!menu) return;
+            menu.querySelectorAll('.excel-filter-checkbox').forEach(item => item.checked = checkbox.checked);
+        }
+
+        function syncExcelSelectAll(checkbox) {
+            const menu = checkbox.closest('.excel-filter-menu');
+            if (!menu) return;
+            const boxes = [...menu.querySelectorAll('.excel-filter-checkbox')];
+            const selectAll = menu.querySelector('.excel-select-all');
+            if (selectAll) selectAll.checked = boxes.length > 0 && boxes.every(item => item.checked);
+        }
+
+        function applyExcelFilter(tableName, key) {
+            const menu = document.getElementById(`filter-menu-${tableName}-${key}`);
+            if (!menu) return;
+
+            const allValues = getFilterValues(tableName, key);
+            const checkedValues = [...menu.querySelectorAll('.excel-filter-checkbox:checked')].map(item => item.value);
+
+            if (checkedValues.length === 0) {
+                tableFilterState[tableName][key] = ['__NO_MATCH__'];
+            } else if (checkedValues.length === allValues.length) {
+                delete tableFilterState[tableName][key];
+            } else {
+                tableFilterState[tableName][key] = checkedValues;
+            }
+
+            closeExcelFilters();
+            rerenderTable(tableName);
+        }
+
+        function clearExcelFilter(tableName, key) {
+            if (tableFilterState[tableName]) {
+                delete tableFilterState[tableName][key];
+            }
+            closeExcelFilters();
+            rerenderTable(tableName);
+        }
+
+        function resetExcelFilters(tableName) {
+            if (tableFilterState[tableName]) tableFilterState[tableName] = {};
+            rerenderTable(tableName);
+        }
+
+        function resetTableFilters(tableName) {
+            // Xóa bộ lọc tiêu đề giống Excel
+            if (tableFilterState[tableName]) {
+                tableFilterState[tableName] = {};
+            }
+
+            // Xóa ô tìm kiếm và bộ lọc thường của từng tab
+            if (tableName === 'dashboard') {
+                const search = document.getElementById('search-input');
+                const status = document.getElementById('filter-status');
+                if (search) search.value = '';
+                if (status) status.value = 'All';
+            }
+
+            if (tableName === 'history') {
+                const search = document.getElementById('history-search');
+                if (search) search.value = '';
+            }
+
+            if (tableName === 'catalog') {
+                const search = document.getElementById('catalog-search');
+                if (search) search.value = '';
+            }
+
+            if (tableName === 'users') {
+                const search = document.getElementById('users-search');
+                if (search) search.value = '';
+            }
+
+            closeExcelFilters();
+            rerenderTable(tableName);
+        }
+
+        function rerenderTable(tableName) {
+            if (tableName === 'dashboard') renderDashboard();
+            if (tableName === 'history') renderHistory();
+            if (tableName === 'catalog') renderCatalog();
+            if (tableName === 'users') renderUsers();
+        }
+
+        function updateFilterIndicators(tableName) {
+            const filters = tableFilterState[tableName] || {};
+            document.querySelectorAll(`[id^="filter-btn-${tableName}-"]`).forEach(btn => {
+                btn.classList.remove('active-filter');
+            });
+
+            Object.keys(filters).forEach(key => {
+                const btn = document.getElementById(`filter-btn-${tableName}-${key}`);
+                if (btn) btn.classList.add('active-filter');
+            });
+        }
+
+        function wildcardToRegex(input) {
+            const escaped = input.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+            const pattern = '^' + escaped.replace(/\*/g, '.*') + '$';
+            return new RegExp(pattern, 'i');
+        }
+
+        function sortTable(tableName, key) {
+            const state = tableSortState[tableName];
+            if (!state) return;
+
+            if (state.key === key) {
+                state.direction = state.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                state.key = key;
+                state.direction = key === 'created_at' ? 'desc' : 'asc';
+            }
+
+            if (tableName === 'dashboard') renderDashboard();
+            if (tableName === 'history') renderHistory();
+            if (tableName === 'catalog') renderCatalog();
+            if (tableName === 'users') renderUsers();
+        }
+
+        function getSortValue(row, key) {
+            if (!row) return '';
+
+            if (key === 'created_at') {
+                return Date.parse(row.created_at || '') || 0;
+            }
+
+            if (key === 'quantity') {
+                return Number(row.quantity || 0);
+            }
+
+            if (key === 'status') {
+                return getStatusText(row.status || '');
+            }
+
+            if (key === 'active') {
+                return row.active ? 'Hoạt động' : 'Đã khóa';
+            }
+
+            return String(row[key] ?? '').toLowerCase().trim();
+        }
+
+        function applyTableSort(rows, tableName) {
+            const state = tableSortState[tableName];
+            if (!state) return rows;
+
+            const direction = state.direction === 'asc' ? 1 : -1;
+            return rows.sort((a, b) => {
+                const va = getSortValue(a, state.key);
+                const vb = getSortValue(b, state.key);
+
+                if (typeof va === 'number' && typeof vb === 'number') {
+                    return (va - vb) * direction;
+                }
+
+                return String(va).localeCompare(String(vb), 'vi', {
+                    numeric: true,
+                    sensitivity: 'base'
+                }) * direction;
+            });
+        }
+
+        function updateSortIndicators(tableName) {
+            const state = tableSortState[tableName];
+            if (!state) return;
+
+            document.querySelectorAll(`[id^="sort-${tableName}-"]`).forEach(icon => {
+                icon.className = 'fas fa-sort text-slate-300';
+                const th = icon.closest('th');
+                if (th) th.classList.remove('active-sort');
+            });
+
+            const activeIcon = document.getElementById(`sort-${tableName}-${state.key}`);
+            if (activeIcon) {
+                activeIcon.className = `fas ${state.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-blue-600`;
+                const th = activeIcon.closest('th');
+                if (th) th.classList.add('active-sort');
+            }
+        }
+
+        function renderDashboard() {
+			const listContainer = document.getElementById('defect-list');
+			listContainer.classList.add('opacity-50');
+            let filtered = getSearchFilteredRows('dashboard');
+            filtered = applyTableFilters(filtered, 'dashboard');
+			filtered = applyTableSort(filtered, 'dashboard');
+			updateSortIndicators('dashboard');
+            updateFilterIndicators('dashboard');
+
+            defectList.innerHTML = filtered.map(d => `
+				<tr onclick="openStatusModal('${d.id}')" class="hover:bg-slate-50 group cursor-pointer">
+					<td class="px-6 py-4 whitespace-nowrap">
+						<div class="text-xs text-slate-600 font-medium">${formatDateTime(d.created_at)}</div>
+					</td>
+					<td class="px-6 py-4">
+						<div class="flex items-center gap-3">
+							${d.image_url ? 
+								`<img src="${d.image_url}" 
+									  onclick="event.stopPropagation(); viewImage('${d.image_url}')" 
+									  class="w-12 h-12 rounded-lg shadow-sm object-cover cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all">` : 
+								`<div class="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center text-slate-300">
+									<i class="fas fa-image"></i>
+								 </div>`
+							}
+							<div>
+								<div class="font-semibold text-slate-800">${d.product_name || 'N/A'}</div>
+								<div class="flex flex-col gap-1 mt-1">
+									<span class="text-[10px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded w-fit">ITEM: ${d.sku || 'N/A'}</span>
+									<span class="text-[10px] font-mono text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded w-fit">BC: ${d.barcode || 'N/A'}</span>
+									<span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded w-fit">SL: ${d.quantity || 1}</span>
+								</div>
+							</div>
+						</div>
+					</td>
+					<td class="px-6 py-4 text-sm text-slate-700">${d.vendor_name || '-'}</td>
+					<td class="px-6 py-4 text-sm font-mono text-slate-600">${d.vendor_id || '-'}</td>
+					<td class="px-6 py-4">
+						<div class="text-sm font-medium">${d.defect_type || 'Lỗi chưa xác định'}</div>
+						<span class="text-[10px] px-2 py-0.5 rounded-full border font-bold ${getSevClass(d.severity)}">${d.severity || 'Medium'}</span>
+					</td>
+					<td class="px-6 py-4">
+						<span class="inline-flex items-center whitespace-nowrap text-sm rounded-lg border px-3 py-1 font-medium ${getStatusClass(d.status)}">
+							${getStatusText(d.status)}
+						</span>
+					</td>
+					<td class="px-6 py-4 text-right">
+						${isAdmin() ? `
+							<button onclick="event.stopPropagation(); deleteItem('defects', '${d.id}')" 
+								class="text-red-500 bg-red-50 px-3 py-2 rounded-xl">
+								<i class="fas fa-trash"></i>
+							</button>
+						` : ''}
+					</td>
+				</tr>
+			`).join('');
+			listContainer.classList.remove('opacity-50');
+			
+			document.getElementById('defect-mobile-list').innerHTML = filtered.map(d => `
+				<div onclick="openStatusModal('${d.id}')" 
+					 class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm active:scale-[0.99] transition cursor-pointer">
+
+					<div class="flex gap-3">
+						${d.image_url ? 
+							`<img src="${d.image_url}" 
+								onclick="event.stopPropagation(); viewImage('${d.image_url}')" 
+								class="w-20 h-20 rounded-xl object-cover border">` :
+							`<div class="w-20 h-20 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300">
+								<i class="fas fa-image text-2xl"></i>
+							</div>`
+						}
+
+						<div class="flex-1 min-w-0">
+							<div class="font-bold text-slate-800 text-base leading-snug">
+								${d.product_name || 'N/A'}
+							</div>
+
+							<div class="text-xs text-slate-500 mt-1">
+								${formatDateTime(d.created_at)}
+							</div>
+
+							<div class="flex flex-wrap gap-1 mt-2">
+								<span class="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+									ITEM: ${d.sku || 'N/A'}
+								</span>
+								<span class="text-[11px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+									BC: ${d.barcode || 'N/A'}
+								</span>
+								<span class="text-[11px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full font-bold">
+									SL: ${d.quantity || 1}
+								</span>
+							</div>
+						</div>
+					</div>
+
+					<div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+						<div class="bg-slate-50 rounded-xl p-2">
+							<div class="text-slate-400">Tên NCC</div>
+							<div class="font-semibold text-slate-700">${d.vendor_name || '-'}</div>
+						</div>
+
+						<div class="bg-slate-50 rounded-xl p-2">
+							<div class="text-slate-400">Mã NCC</div>
+							<div class="font-mono font-semibold text-slate-700">${d.vendor_id || '-'}</div>
+						</div>
+					</div>
+
+					<div class="mt-3">
+						<div class="text-xs text-slate-400">Mô tả lỗi</div>
+						<div class="font-medium text-sm text-slate-700">${d.defect_type || 'Lỗi chưa xác định'}</div>
+					</div>
+
+					<div class="mt-3 flex items-center justify-between">
+						<span class="text-xs rounded-full border px-3 py-1 font-bold ${getStatusClass(d.status)}">
+							${getStatusText(d.status)}
+						</span>
+
+						${isAdmin() ? `
+							<button onclick="event.stopPropagation(); deleteItem('defects', '${d.id}')" 
+								class="text-red-500 bg-red-50 px-3 py-2 rounded-xl">
+								<i class="fas fa-trash"></i>
+							</button>
+						` : ''}
+					</div>
+				</div>
+			`).join('');
+        }
+
+		function renderHistory() {
+			let historyData = getSearchFilteredRows('history');
+            historyData = applyTableFilters(historyData, 'history');
+			historyData = applyTableSort(historyData, 'history');
+			updateSortIndicators('history');
+            updateFilterIndicators('history');
+
+			historyList.innerHTML = historyData.map(d => `
+				<tr class="hover:bg-slate-50 group">
+					<td class="px-6 py-4 whitespace-nowrap">
+						<div class="text-xs text-slate-600 font-medium">${formatDateTime(d.created_at)}</div>
+					</td>
+
+					<td class="px-6 py-4">
+						<div class="flex items-center gap-3">
+							${d.image_url ? 
+								`<img src="${d.image_url}" 
+									onclick="viewImage('${d.image_url}')" 
+									class="w-12 h-12 rounded-lg shadow-sm object-cover cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all">` : 
+								`<div class="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center text-slate-300">
+									<i class="fas fa-image"></i>
+								</div>`
+							}
+
+							<div>
+								<div class="font-semibold text-slate-800">${d.product_name || 'N/A'}</div>
+								<div class="flex flex-col gap-1 mt-1">
+									<span class="text-[10px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded w-fit">ITEM: ${d.sku || 'N/A'}</span>
+									<span class="text-[10px] font-mono text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded w-fit">BC: ${d.barcode || 'N/A'}</span>
+									<span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded w-fit">SL: ${d.quantity || 1}</span>
+								</div>
+							</div>
+						</div>
+					</td>
+
+					<td class="px-6 py-4 text-sm text-slate-700">${d.vendor_name || '-'}</td>
+					<td class="px-6 py-4 text-sm font-mono text-slate-600">${d.vendor_id || '-'}</td>
+
+					<td class="px-6 py-4">
+						<div class="text-sm font-medium">${d.defect_type || 'Lỗi chưa xác định'}</div>
+						<span class="text-[10px] px-2 py-0.5 rounded-full border font-bold ${getSevClass(d.severity)}">${d.severity || 'Medium'}</span>
+					</td>
+
+					<td class="px-6 py-4">
+						<span class="inline-flex items-center whitespace-nowrap text-sm rounded-lg border px-3 py-1 font-medium ${getStatusClass(d.status)}">
+							${getStatusText(d.status)}
+						</span>
+					</td>
+
+					${isAdmin() ? `
+						<td class="px-6 py-4 text-right">
+							<button onclick="event.stopPropagation(); deleteHistoryItem('${d.id}')"
+								class="text-red-500 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-xl transition-colors"
+								title="Chỉ xóa mục đã nằm trong lịch sử">
+								<i class="fas fa-trash"></i>
+							</button>
+						</td>
+					` : ''}
+				</tr>
+			`).join('');
+
+			document.getElementById('history-mobile-list').innerHTML = historyData.map(d => `
+				<div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+					<div class="flex gap-3">
+						${d.image_url ? 
+							`<img src="${d.image_url}" 
+								onclick="viewImage('${d.image_url}')" 
+								class="w-20 h-20 rounded-xl object-cover border">` :
+							`<div class="w-20 h-20 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300">
+								<i class="fas fa-image text-2xl"></i>
+							</div>`
+						}
+
+						<div class="flex-1 min-w-0">
+							<div class="font-bold text-slate-800 text-base leading-snug">
+								${d.product_name || 'N/A'}
+							</div>
+
+							<div class="text-xs text-slate-500 mt-1">
+								${formatDateTime(d.created_at)}
+							</div>
+
+							<div class="flex flex-wrap gap-1 mt-2">
+								<span class="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+									ITEM: ${d.sku || 'N/A'}
+								</span>
+								<span class="text-[11px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+									BC: ${d.barcode || 'N/A'}
+								</span>
+								<span class="text-[11px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full font-bold">
+									SL: ${d.quantity || 1}
+								</span>
+							</div>
+						</div>
+					</div>
+
+					<div class="mt-3">
+						<div class="text-xs text-slate-400">Mô tả lỗi</div>
+						<div class="font-medium text-sm text-slate-700">${d.defect_type || 'Lỗi chưa xác định'}</div>
+					</div>
+
+					<div class="mt-3 flex items-center justify-between gap-2">
+						<span class="text-xs rounded-full border px-3 py-1 font-bold ${getStatusClass(d.status)}">
+							${getStatusText(d.status)}
+						</span>
+
+						${isAdmin() ? `
+							<button onclick="event.stopPropagation(); deleteHistoryItem('${d.id}')"
+								class="text-red-500 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-xl transition-colors">
+								<i class="fas fa-trash"></i>
+							</button>
+						` : ''}
+					</div>
+				</div>
+			`).join('');
+		}
+
+        function renderCatalog() {
+			let filteredCatalog = getSearchFilteredRows('catalog');
+            filteredCatalog = applyTableFilters(filteredCatalog, 'catalog');
+			filteredCatalog = applyTableSort(filteredCatalog, 'catalog');
+			updateSortIndicators('catalog');
+            updateFilterIndicators('catalog');
+
+			catalogList.innerHTML = filteredCatalog.map(c => `
+				<tr class="hover:bg-slate-50 transition-colors">
+					<td class="px-6 py-4 font-mono text-blue-600 text-sm font-bold">${c.barcode}</td>
+					<td class="px-6 py-4 font-medium">${c.product_name}</td>
+					<td class="px-6 py-4 font-mono text-xs">${c.sku}</td>
+					<td class="px-6 py-4 text-sm text-slate-700">${c.vendor_name || '-'}</td>
+					<td class="px-6 py-4 text-sm font-mono text-slate-600">${c.vendor_id || '-'}</td>
+					<td class="px-6 py-4 text-right">
+						<!-- <button onclick="deleteItem('catalog', '${c.id}')" class="text-red-300 hover:text-red-600 p-2">
+							<i class="fas fa-times"></i>
+						</button> -->
+						<button onclick="event.stopPropagation(); deleteItem('catalog', '${c.id}')" 
+							class="text-red-500 bg-red-50 px-3 py-2 rounded-xl">
+							<i class="fas fa-trash"></i>
+						</button>
+					</td>
+				</tr>
+			`).join('');
+			catalogMobileList.innerHTML = filteredCatalog.map(c => `
+				<div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+
+					<div class="flex items-start justify-between gap-3">
+						<div class="min-w-0 flex-1">
+							<div class="font-bold text-slate-800 text-base leading-snug">
+								${c.product_name || 'N/A'}
+							</div>
+
+							<div class="flex flex-wrap gap-1 mt-2">
+								<span class="text-[11px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-mono">
+									BC: ${c.barcode || '-'}
+								</span>
+
+								<span class="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-mono">
+									ITEM: ${c.sku || '-'}
+								</span>
+							</div>
+						</div>
+
+						${isAdmin() ? `
+							<button onclick="event.stopPropagation(); deleteItem('catalog', '${c.id}')"
+								class="text-red-500 bg-red-50 px-3 py-2 rounded-xl shrink-0">
+								<i class="fas fa-trash"></i>
+							</button>
+						` : ''}
+					</div>
+
+					<div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+						<div class="bg-slate-50 rounded-xl p-2">
+							<div class="text-slate-400">Tên NCC</div>
+							<div class="font-semibold text-slate-700 truncate">
+								${c.vendor_name || '-'}
+							</div>
+						</div>
+
+						<div class="bg-slate-50 rounded-xl p-2">
+							<div class="text-slate-400">Mã NCC</div>
+							<div class="font-mono font-semibold text-slate-700 truncate">
+								${c.vendor_id || '-'}
+							</div>
+						</div>
+					</div>
+
+				</div>
+			`).join('');
+		}
+
+        async function updateDefectStatus(id, status) {
+            await supabaseClient.from('defects').update({ status }).eq('id', id);
+        }
+
+        function getDefectStoragePath(imageUrl) {
+            if (!imageUrl) return null;
+
+            try {
+                const url = new URL(imageUrl);
+                const marker = '/defect-images/';
+                const markerIndex = url.pathname.indexOf(marker);
+
+                if (markerIndex !== -1) {
+                    return decodeURIComponent(url.pathname.slice(markerIndex + marker.length));
+                }
+
+                const parts = url.pathname.split('/').filter(Boolean);
+                const fileName = parts[parts.length - 1];
+                return fileName ? `defects/${decodeURIComponent(fileName)}` : null;
+            } catch (e) {
+                const cleanUrl = String(imageUrl).split('?')[0];
+                const fileName = cleanUrl.split('/').pop();
+                return fileName ? `defects/${fileName}` : null;
+            }
+        }
+
+        async function removeDefectImageFromStorage(imageUrl) {
+            const filePath = getDefectStoragePath(imageUrl);
+            if (!filePath) return;
+
+            const { error } = await supabaseClient.storage
+                .from('defect-images')
+                .remove([filePath]);
+
+            if (error) {
+                console.error('Lỗi xóa ảnh Storage:', error.message);
+            }
+        }
+
+        async function deleteHistoryItem(id) {
+            if (!isAdmin()) {
+                alert('Chỉ admin mới được xóa lịch sử.');
+                return;
+            }
+
+            const item = defectsData.find(d => String(d.id) === String(id));
+            if (!item) {
+                alert('Không tìm thấy dữ liệu cần xóa.');
+                return;
+            }
+
+            if (item.status !== 'Resolved') {
+                alert('Chỉ được xóa những mục đã chuyển qua tab Lịch sử (trạng thái Xong).');
+                return;
+            }
+
+            if (!confirm('Xác nhận xóa mục lịch sử này? Thao tác này sẽ xóa cả hình ảnh đính kèm nếu có.')) return;
+
+            try {
+                await removeDefectImageFromStorage(item.image_url);
+
+                const { error } = await supabaseClient
+                    .from('defects')
+                    .delete()
+                    .eq('id', id)
+                    .eq('status', 'Resolved');
+
+                if (error) throw error;
+
+                await createActivityLog('delete', 'defects', id, 'Xóa 1 mục trong tab lịch sử', {
+                    product_name: item.product_name,
+                    sku: item.sku,
+                    barcode: item.barcode,
+                    status: item.status
+                });
+
+                alert('Đã xóa mục lịch sử thành công.');
+                await fetchDefects();
+            } catch (error) {
+                console.error('Lỗi khi xóa lịch sử:', error);
+                alert('Có lỗi xảy ra khi xóa lịch sử: ' + error.message);
+            }
+        }
+
+        async function deleteAllHistoryDefects() {
+            if (!isAdmin()) {
+                alert('Chỉ admin mới được xóa lịch sử.');
+                return;
+            }
+
+            const historyItems = defectsData.filter(d => d.status === 'Resolved');
+
+            if (historyItems.length === 0) {
+                alert('Không có dữ liệu lịch sử để xóa.');
+                return;
+            }
+
+            if (!confirm(`Bạn chắc chắn muốn xóa ${historyItems.length} mục đã nằm trong tab Lịch sử?`)) return;
+            if (!confirm('Xác nhận lần cuối: thao tác này không thể hoàn tác và sẽ xóa cả ảnh đính kèm nếu có.')) return;
+
+            try {
+                const imagePaths = [...new Set(
+                    historyItems
+                        .map(d => getDefectStoragePath(d.image_url))
+                        .filter(Boolean)
+                )];
+
+                if (imagePaths.length > 0) {
+                    const { error: storageError } = await supabaseClient.storage
+                        .from('defect-images')
+                        .remove(imagePaths);
+
+                    if (storageError) {
+                        console.error('Lỗi xóa ảnh lịch sử Storage:', storageError.message);
+                    }
+                }
+
+                const { error } = await supabaseClient
+                    .from('defects')
+                    .delete()
+                    .eq('status', 'Resolved');
+
+                if (error) throw error;
+
+                await createActivityLog('delete', 'defects', null, 'Xóa toàn bộ dữ liệu trong tab lịch sử', {
+                    count: historyItems.length,
+                    image_count: imagePaths.length
+                });
+
+                alert('Đã xóa toàn bộ dữ liệu trong tab lịch sử.');
+                await fetchDefects();
+            } catch (error) {
+                console.error('Lỗi khi xóa toàn bộ lịch sử:', error);
+                alert('Có lỗi xảy ra khi xóa lịch sử: ' + error.message);
+            }
+        }
+
+        async function deleteItem(table, id) {
+			if (!confirm("Xác nhận xóa dữ liệu này? Thao tác này sẽ xóa cả hình ảnh đính kèm (nếu có).")) return;
+
+			try {
+				// 1. Nếu là bảng defects, cần xử lý xóa ảnh trong Storage trước
+				if (table === 'defects') {
+					// Lấy thông tin record để có image_url
+					const { data: item, error: fetchError } = await supabaseClient
+						.from('defects')
+						.select('*')
+						.eq('id', id)
+						.single();
+
+					if (fetchError) throw fetchError;
+
+					// Nếu có ảnh, thực hiện xóa trong Storage
+					if (item && item.image_url) {
+						await removeDefectImageFromStorage(item.image_url);
+					}
+				}
+
+				// 2. Xóa dòng dữ liệu trong Table
+				const { error: deleteError } = await supabaseClient
+					.from(table)
+					.delete()
+					.eq('id', id);
+
+				if (deleteError) throw deleteError;
+
+				await createActivityLog('delete', table, id, `Xóa dữ liệu trong bảng ${table}`, { id });
+
+				alert("Đã xóa dữ liệu thành công!");
+
+			} catch (error) {
+				console.error("Lỗi khi xóa:", error);
+				alert("Có lỗi xảy ra khi xóa: " + error.message);
+			}
+		}
+
+
+
+		function cleanTextValue(value) {
+			if (value === null || value === undefined) return '';
+			return String(value).trim();
+		}
+
+		function pickFirstValue(source, keys) {
+			for (const key of keys) {
+				if (source && source[key] !== undefined && source[key] !== null && String(source[key]).trim() !== '') {
+					return String(source[key]).trim();
+				}
+			}
+			return '';
+		}
+
+		function looksLikeVendorCode(value) {
+			const v = cleanTextValue(value);
+			if (!v) return false;
+			// Mã NCC thường là số/ngắn hoặc dạng NCC-01, NCC001, SUP001...
+			return /^[A-Z0-9._\-\/]{1,30}$/i.test(v) && !/\s/.test(v);
+		}
+
+		function looksLikeVendorName(value) {
+			const v = cleanTextValue(value);
+			if (!v) return false;
+			return /\s/.test(v) || /công ty|cong ty|tnhh|cp|cổ phần|co\.ltd|company|npp|nhà cung cấp|nha cung cap/i.test(v);
+		}
+
+		function normalizeSupplierFields(source = {}) {
+			let vendorName = pickFirstValue(source, [
+				'vendor_name', 'vendorName', 'VendorName', 'vendor', 'supplier_name', 'SupplierName',
+				'Tên NCC', 'Tên nhà cung cấp', 'Ten NCC', 'Ten nha cung cap', 'Nhà cung cấp', 'Nha cung cap'
+			]);
+			let vendorId = pickFirstValue(source, [
+				'vendor_id', 'vendorId', 'VendorId', 'supplier_id', 'SupplierId', 'supplier_code', 'SupplierCode',
+				'Mã NCC', 'Mã nhà cung cấp', 'Ma NCC', 'Ma nha cung cap', 'Mã Ncc', 'Ma Ncc'
+			]);
+
+			// Chống trường hợp file Excel hoặc dữ liệu cũ bị đảo cột: mã nằm ở ô tên, tên nằm ở ô mã.
+			if (looksLikeVendorCode(vendorName) && looksLikeVendorName(vendorId)) {
+				[vendorName, vendorId] = [vendorId, vendorName];
+			}
+
+			return {
+				vendor_name: vendorName,
+				vendor_id: vendorId
+			};
+		}
+
+        document.getElementById('defect-form').onsubmit = async (e) => {
+			e.preventDefault();
+			const submitBtn = e.target.querySelector('button[type="submit"]');
+			const imageInput = document.getElementById('f-image');
+			const imageFile = imageInput?.files?.[0];
+			const defectTypeInput = e.target.querySelector('[name="defect_type"]');
+			const defectType = cleanTextValue(defectTypeInput?.value);
+			let imageUrl = null;
+
+			// Điều kiện bắt buộc: phải có mô tả lỗi và hình ảnh mới được lưu báo cáo.
+			if (!defectType) {
+				alert('Vui lòng nhập Mô tả lỗi trước khi lưu báo cáo.');
+				defectTypeInput?.focus();
+				return;
+			}
+
+			if (!imageFile) {
+				alert('Vui lòng chọn Hình ảnh sản phẩm lỗi trước khi lưu báo cáo.');
+				imageInput?.focus();
+				return;
+			}
+
+			try {
+				showAppLoading('Đang lưu báo cáo lỗi...', 'Đang nén ảnh và gửi dữ liệu lên Supabase');
+				submitBtn.disabled = true;
+				submitBtn.innerText = "Đang xử lý...";
+
+				if (imageFile) {
+					// --- BẮT ĐẦU PHẦN NÉN ẢNH ---
+					const options = {
+						maxSizeMB: 0.8,          // Kích thước tối đa (~800KB)
+						maxWidthOrHeight: 1280, // Độ phân giải tối đa (HD)
+						useWebWorker: true
+					};
+					
+					submitBtn.innerText = "Đang nén ảnh...";
+					const compressedFile = await imageCompression(imageFile, options);
+					// --- KẾT THÚC PHẦN NÉN ẢNH ---
+
+					const fileExt = imageFile.name.split('.').pop();
+					const fileName = `${Math.random()}.${fileExt}`;
+					const filePath = `defects/${fileName}`;
+
+					// Sử dụng compressedFile thay vì imageFile
+					const { data: uploadData, error: uploadError } = await supabaseClient.storage
+						.from('defect-images')
+						.upload(filePath, compressedFile);
+
+					if (uploadError) throw uploadError;
+
+					const { data: publicUrlData } = supabaseClient.storage
+						.from('defect-images')
+						.getPublicUrl(filePath);
+					
+					imageUrl = publicUrlData.publicUrl;
+				}
+
+				// 2. Lưu dữ liệu vào Table 'defects'
+				// Tạo payload rõ ràng để tránh sai cột Mã NCC / Tên NCC khi lưu database.
+					const formData = Object.fromEntries(new FormData(e.target));
+					const supplier = normalizeSupplierFields(formData);
+					const payload = {
+						barcode: cleanTextValue(formData.barcode || document.getElementById('auto-barcode')?.value),
+						product_name: cleanTextValue(formData.product_name),
+						sku: cleanTextValue(formData.sku),
+						vendor_name: supplier.vendor_name,
+						vendor_id: supplier.vendor_id,
+						defect_type: defectType,
+						quantity: Number(formData.quantity || 1),
+						severity: cleanTextValue(formData.severity || 'Medium'),
+						status: cleanTextValue(formData.status || 'Pending'),
+						image_url: imageUrl
+					};
+
+				const { data: insertedDefect, error } = await supabaseClient
+					.from('defects')
+					.insert([payload])
+					.select()
+					.single();
+				
+				if (error) throw error;
+
+				await createNotification('defect_created', insertedDefect || payload);
+				await createActivityLog('create', 'defects', (insertedDefect || payload).id, `Thêm báo lỗi mới: ${(insertedDefect || payload).product_name || '-'}`, { sku: (insertedDefect || payload).sku, barcode: (insertedDefect || payload).barcode, vendor_id: (insertedDefect || payload).vendor_id, quantity: (insertedDefect || payload).quantity, status: (insertedDefect || payload).status });
+
+				// Thành công: Reset form và đóng modal
+				toggleModal('modal-defect', false);
+				e.target.reset();
+				document.getElementById('image-preview').classList.add('hidden');
+				alert("Đã lưu báo cáo thành công!");
+
+			} catch (error) {
+				alert("Lỗi: " + error.message);
+			} finally {
+				hideAppLoading(true);
+				submitBtn.disabled = false;
+				submitBtn.innerText = "Lưu báo cáo";
+			}
+		};
+
+		// Thêm tính năng xem trước ảnh khi chọn file
+		document.getElementById('f-image').onchange = (e) => {
+			const [file] = e.target.files;
+			const preview = document.getElementById('image-preview');
+			if (file) {
+				preview.src = URL.createObjectURL(file);
+				preview.classList.remove('hidden');
+			} else {
+				preview.removeAttribute('src');
+				preview.classList.add('hidden');
+			}
+		};
+
+        document.getElementById('catalog-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = Object.fromEntries(new FormData(e.target));
+	            const supplier = normalizeSupplierFields(formData);
+	            const payload = {
+	                barcode: cleanTextValue(formData.barcode),
+	                product_name: cleanTextValue(formData.product_name),
+	                sku: cleanTextValue(formData.sku),
+	                vendor_name: supplier.vendor_name,
+	                vendor_id: supplier.vendor_id
+	            };
+	            showAppLoading('Đang lưu danh mục...', 'Đang kiểm tra và thêm sản phẩm vào Supabase');
+	            try {
+	                const { data: insertedCatalog, error } = await supabaseClient
+	                    .from('catalog')
+	                    .insert([payload])
+                    .select()
+                    .single();
+                if (!error) {
+                    await createActivityLog('create', 'catalog', (insertedCatalog || payload).id, `Thêm danh mục: ${(insertedCatalog || payload).product_name || '-'}`, { sku: (insertedCatalog || payload).sku, barcode: (insertedCatalog || payload).barcode, vendor_id: (insertedCatalog || payload).vendor_id });
+                    toggleModal('modal-catalog', false);
+                    e.target.reset();
+                } else {
+                    alert("Lỗi khi lưu danh mục (Kiểm tra tên cột DB): " + error.message);
+                }
+            } finally {
+                hideAppLoading(true);
+            }
+        };
+
+        document.getElementById('excel-input').onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (evt) => {
+                showAppLoading('Đang nhập danh mục...', 'Đang đọc Excel và lưu dữ liệu');
+                try {
+                const workbook = XLSX.read(evt.target.result, { type: 'binary' });
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                
+                const rows = json.map(row => ({
+                    barcode: String(row.Mahang || row.Barcode || row["Mã vạch"] || "").trim(),
+                    product_name: cleanTextValue(row.Tenhang || row.ProductName || row["Tên sản phẩm"] || row["Tên hàng"]),
+                    sku: cleanTextValue(row.MaSanPham || row.SKU || row["Item"]),
+                    ...normalizeSupplierFields(row)
+                })).filter(r => r.barcode && r.product_name);
+
+                if (rows.length === 0) {
+                    alert("Không tìm thấy dữ liệu hợp lệ trong file Excel.");
+                    return;
+                }
+
+                const { error } = await supabaseClient.from('catalog').insert(rows);
+                if (error) alert("Lỗi khi nhập liệu: " + error.message);
+                else {
+                    await createActivityLog('import', 'catalog', null, `Nhập Excel danh mục: ${rows.length} sản phẩm`, { count: rows.length });
+                    alert(`Đã nhập thành công ${rows.length} sản phẩm.`);
+                }
+                } finally {
+                    hideAppLoading(true);
+                }
+            };
+            reader.readAsBinaryString(file);
+            e.target.value = ''; 
+        };
+
+		document.getElementById('defect-excel-input').onchange = (e) => {
+			const file = e.target.files[0];
+			if (!file) return;
+
+			const reader = new FileReader();
+
+			reader.onload = async (evt) => {
+				showAppLoading('Đang nhập báo cáo lỗi...', 'Đang đọc Excel và lưu danh sách báo lỗi');
+				try {
+				const workbook = XLSX.read(evt.target.result, { type: 'binary' });
+				const sheet = workbook.Sheets[workbook.SheetNames[0]];
+				const json = XLSX.utils.sheet_to_json(sheet);
+
+				const rows = json.map(row => {
+					const statusText = String(row["Trạng thái"] || row.Status || "Pending").trim();
+
+					let status = "Pending";
+					if (statusText === "Đang sửa" || statusText === "Fixing") status = "Fixing";
+					if (statusText === "Xong" || statusText === "Resolved" || statusText === "Đã hoàn thành") status = "Resolved";
+
+					return {
+						barcode: String(row["Barcode"] || row["Mã vạch"] || "").trim(),
+						product_name: cleanTextValue(row["Tên sản phẩm"] || row.ProductName || row.Tenhang),
+						sku: String(row["SKU"] || row["Item"] || row.MaSanPham || "").trim(),
+						...normalizeSupplierFields(row),
+						defect_type: row["Mô tả lỗi"] || row["Loại lỗi"] || "",
+						quantity: Number(row["Số lượng"] || row.Quantity || 1),
+						severity: row["Mức độ"] || row.Severity || "Medium",
+						status: status
+					};
+				}).filter(r => r.product_name && r.defect_type);
+
+				if (rows.length === 0) {
+					alert("Không tìm thấy dữ liệu báo lỗi hợp lệ trong file Excel.");
+					return;
+				}
+
+				const { error } = await supabaseClient
+					.from('defects')
+					.insert(rows);
+
+				if (error) {
+					alert("Lỗi khi nhập báo lỗi: " + error.message);
+				} else {
+					alert(`Đã nhập thành công ${rows.length} dòng báo lỗi.`);
+					await createNotification('defect_created', {
+						product_name: `Nhập Excel ${rows.length} dòng báo lỗi`,
+						sku: '',
+						barcode: ''
+					});
+					await fetchDefects();
+				}
+				} finally {
+					hideAppLoading(true);
+				}
+			};
+
+			reader.readAsBinaryString(file);
+			e.target.value = '';
+		};
+
+		document.addEventListener('keydown', (e) => {
+
+			const loginScreen = document.getElementById('login-screen');
+
+			// chỉ hoạt động khi màn login đang mở
+			if (!loginScreen.classList.contains('hidden')) {
+
+				if (e.key === 'Enter') {
+					loginApp();
+				}
+
+			}
+
+		});
+
+        window.switchTab = (tab) => {
+
+			const toggleHidden = (id, hidden) => {
+				const el = document.getElementById(id);
+				if (el) el.classList.toggle('hidden', hidden);
+			};
+
+			const toggleClass = (id, className, enabled) => {
+				const el = document.getElementById(id);
+				if (el) el.classList.toggle(className, enabled);
+			};
+
+			if (tab === 'catalog' && !canManageData()) {
+				alert("Bạn không có quyền truy cập danh mục hàng hóa.");
+				tab = 'dashboard';
+			}
+
+			if (tab === 'users' && !isAdmin()) {
+				alert("Bạn không có quyền truy cập quản lý tài khoản.");
+				tab = 'dashboard';
+			}
+
+			if (tab === 'logs' && !isAdmin()) {
+				alert("Chỉ admin mới được xem nhật ký hoạt động.");
+				tab = 'dashboard';
+			}
+
+			// views
+			toggleHidden('view-dashboard', tab !== 'dashboard');
+			toggleHidden('view-history', tab !== 'history');
+			toggleHidden('view-catalog', tab !== 'catalog');
+			toggleHidden('view-users', tab !== 'users');
+			toggleHidden('view-logs', tab !== 'logs');
+
+			// tabs active
+			toggleClass('tab-dashboard', 'tab-active', tab === 'dashboard');
+			toggleClass('tab-history', 'tab-active', tab === 'history');
+			toggleClass('tab-catalog', 'tab-active', tab === 'catalog');
+			toggleClass('tab-users', 'tab-active', tab === 'users');
+			toggleClass('tab-logs', 'tab-active', tab === 'logs');
+
+			// text colors
+			toggleClass('tab-dashboard', 'text-slate-500', tab !== 'dashboard');
+			toggleClass('tab-history', 'text-slate-500', tab !== 'history');
+			toggleClass('tab-catalog', 'text-slate-500', tab !== 'catalog');
+			toggleClass('tab-users', 'text-slate-500', tab !== 'users');
+			toggleClass('tab-logs', 'text-slate-500', tab !== 'logs');
+				
+			if (tab === 'users') {
+				fetchUsers();
+			}
+
+			if (tab === 'logs') {
+				fetchActivityLogs();
+			}
+			
+			['dashboard', 'history', 'catalog', 'users', 'logs'].forEach(name => {
+				const el = document.getElementById(`m-tab-${name}`);
+				if (!el) return;
+
+				const active = tab === name;
+
+				el.classList.toggle('text-blue-600', active);
+				el.classList.toggle('bg-blue-50', active);
+				el.classList.toggle('text-slate-500', !active);
+			});
+		};
+
+        window.toggleModal = (id, show) => {
+            const modal = document.getElementById(id);
+            if (!modal) return;
+
+            modal.classList.toggle('hidden', !show);
+
+            // Khi mở form/modal trên mobile thì ẩn nút nổi dấu cộng,
+            // tránh nút còn đè lên bảng nhập thông tin.
+            const hasOpenModal = Array.from(document.querySelectorAll('[id^=\"modal-\"]'))
+                .some(el => !el.classList.contains('hidden'));
+
+            document.body.classList.toggle('modal-open', hasOpenModal);
+        };
+
+        window.downloadSampleExcel = () => {
+            const data = [{"Mahang":"893123456789","Tenhang":"Sản phẩm Mẫu A","MaSanPham":"SKU-001","VendorName":"Công ty TNHH ABC","VendorId":"NCC-01"}];
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Danh mục");
+            XLSX.writeFile(wb, "Mau_Nhap_Danh_Muc.xlsx");
+        };
+
+        function updateStatusUI(status) {
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            if (status === 'online') {
+                dot.className = "w-2 h-2 rounded-full bg-green-500";
+                text.innerText = "Kết nối thành công";
+            } else if (status === 'offline') {
+                dot.className = "w-2 h-2 rounded-full bg-red-500";
+                text.innerText = "Kết nối thất bại";
+            }
+        }
+
+		// Hàm mở/đóng modal xem ảnh
+		function viewImage(url) {
+			const modal = document.getElementById('modal-image');
+			const img = document.getElementById('full-res-image');
+			const downloadLink = document.getElementById('download-link');
+			
+			img.src = url;
+			downloadLink.href = url;
+			
+			// Xử lý tên file khi tải về dựa trên URL hoặc thời gian
+			const fileName = `defect_${new Date().getTime()}.jpg`;
+			downloadLink.setAttribute('download', fileName);
+
+			modal.classList.remove('hidden');
+		}
+
+		function toggleImageModal(show) {
+			const modal = document.getElementById('modal-image');
+			if (!show) {
+				modal.classList.add('hidden');
+				document.getElementById('full-res-image').src = ''; // Clear src để tránh giật hình khi mở lại
+			}
+		}
+
+		async function downloadImage(url) {
+			const response = await fetch(url);
+			const blob = await response.blob();
+			const blobUrl = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = blobUrl;
+			a.download = `defect-image-${Date.now()}.jpg`;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(blobUrl);
+		}
+
+        const getSevClass = (s) => ({'High':'text-red-700 bg-red-50 border-red-200','Medium':'text-yellow-700 bg-yellow-50 border-yellow-200','Low':'text-blue-700 bg-blue-50 border-blue-200'}[s] || 'text-slate-700 bg-slate-50 border-slate-200');
+        const getStatusClass = (s) => ({'Resolved':'bg-green-100 text-green-800 border-green-200','Fixing':'bg-orange-100 text-orange-800 border-orange-200','Pending':'bg-yellow-100 text-yellow-800 border-yellow-200'}[s] || 'bg-slate-50');
+
+        const updateStats = () => {
+			const totalItems = defectsData.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+			document.getElementById('stat-total').innerText = totalItems;
+            //document.getElementById('stat-total').innerText = defectsData.length;
+            document.getElementById('stat-pending').innerText = defectsData.filter(d => d.status === 'Pending').length;
+            document.getElementById('stat-fixing').innerText = defectsData.filter(d => d.status === 'Fixing').length;
+            document.getElementById('stat-resolved').innerText = defectsData.filter(d => d.status === 'Resolved').length;
+        };
+
+        searchInput.oninput = renderDashboard;
+		catalogSearch?.addEventListener('input', renderCatalog);
+		historySearch?.addEventListener('input', renderHistory);
+		usersSearch?.addEventListener('input', renderUsers);
+		logsSearch?.addEventListener('input', renderActivityLogs);
+		document.getElementById('logs-action-filter')?.addEventListener('change', renderActivityLogs);
+        
+
+
+        let html5QrCodeScanner = null;
+        let barcodeScannerRunning = false;
+        let barcodeScannerLocked = false;
+
+        function setBarcodeScanStatus(message, type = 'info') {
+            const el = document.getElementById('barcode-scan-status');
+            if (!el) return;
+
+            el.innerText = message;
+            el.className = 'text-sm rounded-xl px-3 py-2 border ' + (
+                type === 'error'
+                    ? 'text-red-600 bg-red-50 border-red-200'
+                    : type === 'success'
+                        ? 'text-green-700 bg-green-50 border-green-200'
+                        : 'text-slate-500 bg-slate-50 border-slate-200'
+            );
+        }
+
+        function fillBarcodeFromCamera(code) {
+            const barcodeInput = document.getElementById('auto-barcode');
+            if (!barcodeInput) return;
+
+            barcodeInput.value = String(code || '').trim();
+            barcodeInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        async function openBarcodeScanner() {
+            const modal = document.getElementById('modal-barcode-scanner');
+            if (!modal) return;
+
+            modal.classList.remove('hidden');
+            barcodeScannerLocked = false;
+            setBarcodeScanStatus('Đang mở camera...');
+
+            if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                setBarcodeScanStatus('Trình duyệt chỉ cho quét camera khi web chạy HTTPS hoặc localhost.', 'error');
+                return;
+            }
+
+            if (typeof Html5Qrcode === 'undefined') {
+                setBarcodeScanStatus('Chưa tải được thư viện quét mã vạch. Kiểm tra kết nối Internet rồi tải lại trang.', 'error');
+                return;
+            }
+
+            try {
+                if (!html5QrCodeScanner) {
+                    html5QrCodeScanner = new Html5Qrcode('barcode-reader');
+                }
+
+                const config = {
+                    fps: 12,
+                    qrbox: function(viewfinderWidth, viewfinderHeight) {
+                        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                        return {
+                            width: Math.floor(minEdge * 0.9),
+                            height: Math.floor(minEdge * 0.45)
+                        };
+                    },
+                    formatsToSupport: [
+                        Html5QrcodeSupportedFormats.EAN_13,
+                        Html5QrcodeSupportedFormats.EAN_8,
+                        Html5QrcodeSupportedFormats.CODE_128,
+                        Html5QrcodeSupportedFormats.CODE_39,
+                        Html5QrcodeSupportedFormats.UPC_A,
+                        Html5QrcodeSupportedFormats.UPC_E,
+                        Html5QrcodeSupportedFormats.ITF,
+                        Html5QrcodeSupportedFormats.QR_CODE
+                    ]
+                };
+
+                await html5QrCodeScanner.start(
+                    { facingMode: 'environment' },
+                    config,
+                    async (decodedText) => {
+                        if (barcodeScannerLocked) return;
+                        barcodeScannerLocked = true;
+                        setBarcodeScanStatus('✓ Đã quét được: ' + decodedText, 'success');
+                        fillBarcodeFromCamera(decodedText);
+                        setTimeout(() => closeBarcodeScanner(), 350);
+                    },
+                    () => {}
+                );
+
+                barcodeScannerRunning = true;
+                setBarcodeScanStatus('Camera đã sẵn sàng. Đưa mã vạch vào giữa khung.');
+
+            } catch (error) {
+                console.error('Lỗi mở camera quét mã vạch:', error);
+                setBarcodeScanStatus('Không mở được camera. Hãy cấp quyền Camera cho trình duyệt rồi thử lại.', 'error');
+            }
+        }
+
+        async function closeBarcodeScanner() {
+            const modal = document.getElementById('modal-barcode-scanner');
+
+            try {
+                if (html5QrCodeScanner && barcodeScannerRunning) {
+                    await html5QrCodeScanner.stop();
+                    await html5QrCodeScanner.clear();
+                }
+            } catch (error) {
+                console.warn('Không dừng được camera hoặc camera đã dừng:', error);
+            }
+
+            barcodeScannerRunning = false;
+            barcodeScannerLocked = false;
+
+            if (modal) modal.classList.add('hidden');
+        }
+
+        document.getElementById('auto-barcode').oninput = async (e) => {
+			const val = e.target.value.trim();
+			const statusMsg = document.getElementById('search-status');
+			
+			// Nếu xóa trắng ô barcode thì xóa trắng các ô thông tin
+			if (!val) { 
+				statusMsg.classList.add('hidden'); 
+				resetDefectFields();
+				return; 
+			}
+
+			// 1. Tìm nhanh trong catalogData (dữ liệu đã load sẵn)
+			let found = catalogData.find(c => c.barcode === val);
+
+			// 2. Nếu không thấy trong máy, thử truy vấn trực tiếp từ Supabase
+			if (!found && supabaseClient) {
+				statusMsg.innerText = "Đang tìm trong danh mục...";
+				statusMsg.classList.remove('hidden', 'text-blue-600');
+				statusMsg.classList.add('text-slate-400');
+
+				const { data, error } = await supabaseClient
+					.from('catalog')
+					.select('*')
+					.eq('barcode', val)
+					.single();
+				
+				if (data) found = data;
+			}
+
+			// 3. Hiển thị kết quả
+			if (found) {
+					const supplier = normalizeSupplierFields(found);
+					document.getElementById('f-product_name').value = found.product_name || '';
+					document.getElementById('f-sku').value = found.sku || '';
+					document.getElementById('f-vendor_name').value = supplier.vendor_name;
+					document.getElementById('f-vendor_id').value = supplier.vendor_id;
+					document.getElementById('f-barcode').value = found.barcode || val;
+				
+				statusMsg.innerText = "✓ Đã tìm thấy thông tin!";
+				statusMsg.classList.remove('hidden', 'text-slate-400');
+				statusMsg.classList.add('text-blue-600');
+			} else {
+				statusMsg.innerText = "⚠ Không tìm thấy trong danh mục";
+				statusMsg.classList.remove('text-blue-600');
+				statusMsg.classList.add('text-orange-500');
+				// Không reset fields ở đây để người dùng có thể tự nhập tay nếu là hàng mới
+			}
+		};
+
+		// Hàm hỗ trợ xóa trắng form
+		function resetDefectFields() {
+			document.getElementById('f-product_name').value = '';
+			document.getElementById('f-sku').value = '';
+			document.getElementById('f-vendor_name').value = '';
+			document.getElementById('f-vendor_id').value = '';
+			document.getElementById('f-barcode').value = '';
+		}
+		
+		function formatDateTime(dateString) {
+			if (!dateString) return 'N/A';
+			const date = new Date(dateString);
+			return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + 
+				   ' ' + date.toLocaleDateString('vi-VN');
+		}
+
+
+		function getVisibleRowsForExport(tableName) {
+			let rows = getSearchFilteredRows(tableName);
+			rows = applyTableFilters(rows, tableName);
+			rows = applyTableSort([...rows], tableName);
+			return rows;
+		}
+
+		function exportDefectsToExcel() {
+			const visibleRows = getVisibleRowsForExport('dashboard');
+
+			if (visibleRows.length === 0) {
+				alert("Không có dữ liệu phù hợp với bộ lọc hiện tại để xuất!");
+				return;
+			}
+
+			// Xuất đúng dữ liệu đang hiển thị sau khi tìm kiếm + lọc tiêu đề giống Excel
+			const dataToExport = visibleRows.map(d => ({
+				"Thời gian": new Date(d.created_at).toLocaleString('vi-VN'),
+				"Barcode": d.barcode || '',
+				"Tên sản phẩm": d.product_name || '',
+				"Số lượng": d.quantity || 1,
+				"Item": d.sku || '',
+				"Mã NCC": d.vendor_id || '',
+				"Tên NCC": d.vendor_name || '',
+				"Loại lỗi": d.defect_type || '',
+				"Mức độ": d.severity || '',
+				"Trạng thái": d.status === 'Pending' ? 'Chờ xử lý' : (d.status === 'Fixing' ? 'Đang sửa' : 'Xong'),
+				"Link hình ảnh": d.image_url || ''
+			}));
+
+			// 2. Tạo Workbook và Worksheet
+			const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+			const workbook = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(workbook, worksheet, "Danh sách hàng lỗi");
+
+			// 3. Tự động căn chỉnh độ rộng cột (tùy chọn)
+			const wscols = [
+				{wch: 20}, {wch: 15}, {wch: 30}, {wch: 15}, 
+				{wch: 10}, {wch: 25}, {wch: 20}, {wch: 10}, 
+				{wch: 15}, {wch: 40}
+			];
+			worksheet['!cols'] = wscols;
+
+			// 4. Xuất file với tên file có ngày tháng
+			const today = new Date().toISOString().slice(0, 10);
+			XLSX.writeFile(workbook, `Bao_Cao_Loi_${today}.xlsx`);
+		}
+
+		function exportHistoryToExcel() {
+			const historyData = getVisibleRowsForExport('history');
+
+			if (historyData.length === 0) {
+				alert("Không có dữ liệu lịch sử phù hợp với bộ lọc hiện tại để xuất!");
+				return;
+			}
+
+			const dataToExport = historyData.map(d => ({
+				"Thời gian": new Date(d.created_at).toLocaleString('vi-VN'),
+				"Barcode": d.barcode || '',
+				"Tên sản phẩm": d.product_name || '',
+				"Số lượng": d.quantity || 1,
+				"Item": d.sku || '',
+				"Mã NCC": d.vendor_id || '',
+				"Tên NCC": d.vendor_name || '',
+				"Loại lỗi": d.defect_type || '',
+				"Mức độ": d.severity || '',
+				"Trạng thái": "Xong",
+				"Link hình ảnh": d.image_url || ''
+			}));
+
+			const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+			const workbook = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(workbook, worksheet, "Lịch sử hàng lỗi");
+
+			const today = new Date().toISOString().slice(0, 10);
+			XLSX.writeFile(workbook, `Lich_Su_Hang_Loi_${today}.xlsx`);
+		}
+
+		async function loginApp() {
+			const mode = document.getElementById('login-mode').value;
+			const username = document.getElementById('login-user').value.trim();
+			const password = document.getElementById('login-pass').value.trim();
+
+			document.getElementById('login-error').classList.add('hidden');
+
+			if (!username || !password) {
+				document.getElementById('login-error').innerText = 'Vui lòng nhập tài khoản và mật khẩu';
+				document.getElementById('login-error').classList.remove('hidden');
+				return;
+			}
+
+			showAppLoading('Đang đăng nhập...', 'Đang kiểm tra tài khoản và phân quyền');
+
+			try {
+				if (mode === 'auth') {
+					const { data, error } = await supabaseClient.auth.signInWithPassword({
+						email: username,
+						password
+					});
+
+					if (error) {
+						document.getElementById('login-error').innerText = error.message;
+						document.getElementById('login-error').classList.remove('hidden');
+						return;
+					}
+
+					currentUser = data.user;
+					await loadUserRole();
+					currentDisplayName = data.user.email || 'Quản trị';
+					updateHelloUser();
+					localStorage.setItem('loginMode', 'auth');
+				}
+
+				if (mode === 'app_user') {
+					const { data, error } = await supabaseClient.rpc('login_app_user', {
+						p_username: username,
+						p_password: password
+					});
+
+					if (error || !data || data.length === 0) {
+						document.getElementById('login-error').innerText = 'Sai tài khoản hoặc mật khẩu';
+						document.getElementById('login-error').classList.remove('hidden');
+						return;
+					}
+
+					const user = data[0];
+					currentUser = user;
+					currentRole = user.role || 'staff';
+					currentDisplayName = user.full_name || user.username || 'Nhân viên';
+					updateHelloUser();
+					localStorage.setItem('loginMode', 'app_user');
+					localStorage.setItem('appUser', JSON.stringify(user));
+				}
+
+				updateAppLoading('Đang mở giao diện...', 'Đang tải dữ liệu theo quyền tài khoản');
+				document.getElementById('login-screen').classList.add('hidden');
+				applyPermissionUI();
+				await fetchUsers();
+				if (isAdmin()) await fetchActivityLogs();
+				await refreshNotificationsAfterLogin();
+				await createActivityLog('login', 'session', null, `${currentDisplayName} đăng nhập hệ thống`, { mode, username });
+				renderDashboard();
+				renderHistory();
+			} finally {
+				hideAppLoading(true);
+			}
+		}
+
+		async function logoutApp() {
+			stopAutoRefresh();
+			const mode = localStorage.getItem('loginMode');
+
+			await createActivityLog('logout', 'session', null, `${currentDisplayName || 'Người dùng'} đăng xuất hệ thống`, { mode });
+
+			if (mode === 'auth') {
+				await supabaseClient.auth.signOut();
+			}
+
+			localStorage.removeItem('loginMode');
+			localStorage.removeItem('appUser');
+
+			location.reload();
+		}
+
+		async function loadUserRole() {
+			if (!currentUser) return;
+
+			// Tài khoản đăng nhập bằng Supabase Auth là tài khoản quản trị.
+			// Nếu bảng profiles chưa có dòng role cho user này thì vẫn cho quyền admin,
+			// tránh bị mặc định staff làm ẩn tab quản trị/thông báo.
+			currentRole = 'admin';
+
+			try {
+				const { data, error } = await supabaseClient
+					.from('profiles')
+					.select('role')
+					.eq('id', currentUser.id)
+					.maybeSingle();
+
+				if (!error && data && data.role) {
+					currentRole = data.role;
+				}
+			} catch (error) {
+				console.warn('Không đọc được profiles, giữ quyền admin cho tài khoản Auth:', error.message);
+			}
+		}
+
+		async function checkLogin() {
+			showAppLoading('Đang kiểm tra phiên đăng nhập...', 'Đang khôi phục phiên làm việc nếu có');
+			try {
+				const mode = localStorage.getItem('loginMode');
+
+				if (mode === 'app_user') {
+					const savedUser = localStorage.getItem('appUser');
+
+					if (savedUser) {
+						currentUser = JSON.parse(savedUser);
+						currentRole = currentUser.role || 'staff';
+						currentDisplayName = currentUser.full_name || currentUser.username || 'Nhân viên';
+
+						updateHelloUser();
+						document.getElementById('login-screen').classList.add('hidden');
+						applyPermissionUI();
+						await fetchUsers();
+						if (isAdmin()) await fetchActivityLogs();
+						await refreshNotificationsAfterLogin();
+						renderDashboard();
+						renderHistory();
+						return;
+					}
+				}
+
+				const { data } = await supabaseClient.auth.getSession();
+
+				if (data.session) {
+					currentUser = data.session.user;
+					await loadUserRole();
+					currentDisplayName = currentUser.email || 'Quản trị';
+
+					updateHelloUser();
+					document.getElementById('login-screen').classList.add('hidden');
+					applyPermissionUI();
+					await fetchUsers();
+					if (isAdmin()) await fetchActivityLogs();
+					await refreshNotificationsAfterLogin();
+					renderDashboard();
+					renderHistory();
+				} else {
+					document.getElementById('login-screen').classList.remove('hidden');
+				}
+			} finally {
+				hideAppLoading(true);
+			}
+		}
+
+		function getStatusText(status) {
+			if (status === 'Pending') return 'Chờ xử lý';
+			if (status === 'Fixing') return 'Đã sửa';
+			if (status === 'Resolved') return 'Xong';
+			return 'Chờ xử lý';
+		}
+
+		function openStatusModal(id) {
+
+			const defect = defectsData.find(d => d.id == id);
+
+			if (!defect) return;
+
+			document.getElementById('status-defect-id').value = id;
+
+			document.getElementById('status-product-name').innerText =
+				defect.product_name || 'N/A';
+
+			document.getElementById('status-sku').innerText =
+				defect.sku || '-';
+
+			document.getElementById('status-barcode').innerText =
+				defect.barcode || '-';
+
+			document.getElementById('status-date').innerText =
+				formatDateTime(defect.created_at);
+
+			toggleModal('modal-status', true);
+		}
+
+		async function saveStatus(status) {
+			const id = document.getElementById('status-defect-id').value;
+
+			if (!id) return;
+
+			const currentDefect = defectsData.find(d => d.id == id) || {};
+
+			const { data: updatedDefect, error } = await supabaseClient
+				.from('defects')
+				.update({ status })
+				.eq('id', id)
+				.select()
+				.single();
+
+			if (error) {
+				alert("Lỗi cập nhật trạng thái: " + error.message);
+				return;
+			}
+
+			await createActivityLog('update', 'defects', id, `Cập nhật trạng thái hàng lỗi: ${updatedDefect?.product_name || currentDefect.product_name || '-'}`, { old_status: currentDefect.status, new_status: status, sku: updatedDefect?.sku || currentDefect.sku, barcode: updatedDefect?.barcode || currentDefect.barcode });
+
+			if (status === 'Resolved' && currentDefect.status !== 'Resolved') {
+				await createNotification('defect_resolved', updatedDefect || currentDefect, { status });
+			}
+
+			toggleModal('modal-status', false);
+			await fetchDefects();
+		}
+
+		function downloadDefectSampleExcel() {
+			const data = [{
+				"Barcode": "2110706100077",
+				"Tên sản phẩm": "GẤU ĐỨNG TIM LỚN",
+				"Item": "100164",
+				"Tên NCC": "Tên nhà cung cấp mẫu",
+				"Mã NCC": "NCC001",
+				"Mô tả lỗi": "Rách bao bì",
+				"Số lượng": 1,
+				"Mức độ": "Medium",
+				"Trạng thái": "Pending"
+			}];
+
+			const ws = XLSX.utils.json_to_sheet(data);
+			const wb = XLSX.utils.book_new();
+
+			XLSX.utils.book_append_sheet(wb, ws, "Bao cao loi");
+			XLSX.writeFile(wb, "Mau_Nhap_Bao_Cao_Loi.xlsx");
+		}
+
+		function applyPermissionUI() {
+			document.querySelectorAll('.admin-po-only').forEach(el => {
+				el.classList.toggle('hidden', !canManageData());
+			});
+
+			document.querySelectorAll('.admin-only').forEach(el => {
+				el.classList.toggle('hidden', !isAdmin());
+			});
+
+			if (!canManageData()) {
+				document.getElementById('view-catalog').classList.add('hidden');
+				document.getElementById('view-dashboard').classList.remove('hidden');
+			}
+		}
+
+		function renderUsers() {
+
+			const query = (usersSearch?.value || '').toLowerCase().trim();
+
+			let filteredUsers = appUsers.filter(u => {
+				const searchStr = `${u.username || ''} ${u.full_name || ''} ${u.role || ''} ${u.active ? 'hoạt động active' : 'đã khóa inactive'}`.toLowerCase();
+				return searchStr.includes(query);
+			});
+
+			filteredUsers = applyTableSort(filteredUsers, 'users');
+			updateSortIndicators('users');
+
+			usersList.innerHTML = filteredUsers.map(u => `
+
+				<tr class="hover:bg-slate-50">
+
+					<td class="px-6 py-4 font-semibold">
+						${u.username}
+					</td>
+
+					<td class="px-6 py-4">
+						${u.full_name || '-'}
+					</td>
+
+					<td class="px-6 py-4">
+
+						<span class="px-2 py-1 rounded-full text-xs font-bold
+							${u.role === 'admin'
+								? 'bg-red-100 text-red-700'
+								: u.role === 'po'
+									? 'bg-blue-100 text-blue-700'
+									: 'bg-slate-100 text-slate-700'}">
+
+							${u.role}
+						</span>
+
+					</td>
+
+					<td class="px-6 py-4">
+
+						<span class="px-2 py-1 rounded-full text-xs font-bold
+							${u.active
+								? 'bg-green-100 text-green-700'
+								: 'bg-red-100 text-red-700'}">
+
+							${u.active ? 'Hoạt động' : 'Đã khóa'}
+						</span>
+
+					</td>
+
+					<td class="px-6 py-4 text-sm text-slate-500">
+						${formatDateTime(u.created_at)}
+					</td>
+
+					<td class="px-6 py-4 text-right">
+
+						<div class="flex justify-end gap-2">
+
+							<button onclick="toggleUserStatus('${u.id}', ${u.active})"
+								class="px-3 py-1 rounded-lg text-sm
+								${u.active
+									? 'bg-yellow-100 text-yellow-700'
+									: 'bg-green-100 text-green-700'}">
+
+								${u.active ? 'Khóa' : 'Mở'}
+							</button>
+
+							<button onclick="openEditUserModal('${u.id}')"
+								class="px-3 py-1 rounded-lg bg-blue-100 text-blue-700 text-sm ml-2">
+								Sửa
+							</button>
+
+							<button onclick="deleteUser('${u.id}')"
+								class="px-3 py-1 rounded-lg bg-red-100 text-red-700 text-sm">
+
+								Xóa
+							</button>
+
+						</div>
+
+					</td>
+
+				</tr>
+
+			`).join('');
+			
+			usersMobileList.innerHTML = filteredUsers.map(u => `
+				<div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+
+					<div class="flex items-start justify-between gap-3">
+						<div>
+							<div class="font-bold text-slate-800 text-lg">
+								${u.full_name || '-'}
+							</div>
+
+							<div class="text-sm text-slate-500 mt-1">
+								@${u.username}
+							</div>
+						</div>
+
+						<span class="px-2 py-1 rounded-full text-xs font-bold ${
+							u.role === 'admin'
+								? 'bg-red-100 text-red-700'
+								: u.role === 'po'
+									? 'bg-blue-100 text-blue-700'
+									: 'bg-slate-100 text-slate-700'
+						}">
+							${u.role}
+						</span>
+					</div>
+
+					<div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+						<div class="bg-slate-50 rounded-xl p-2">
+							<div class="text-slate-400">Trạng thái</div>
+							<div class="font-bold ${u.active ? 'text-green-600' : 'text-red-600'}">
+								${u.active ? 'Hoạt động' : 'Đã khóa'}
+							</div>
+						</div>
+
+						<div class="bg-slate-50 rounded-xl p-2">
+							<div class="text-slate-400">Ngày tạo</div>
+							<div class="font-semibold text-slate-700">
+								${formatDateTime(u.created_at)}
+							</div>
+						</div>
+					</div>
+
+					<div class="mt-4 grid grid-cols-3 gap-2">
+						<button onclick="openEditUserModal('${u.id}')"
+							class="py-2 rounded-xl bg-blue-50 text-blue-700 font-bold text-sm">
+							Sửa
+						</button>
+
+						<button onclick="toggleUserStatus('${u.id}', ${u.active})"
+							class="py-2 rounded-xl font-bold text-sm ${
+								u.active
+									? 'bg-yellow-50 text-yellow-700'
+									: 'bg-green-50 text-green-700'
+							}">
+							${u.active ? 'Khóa' : 'Mở'}
+						</button>
+
+						<button onclick="deleteUser('${u.id}')"
+							class="py-2 rounded-xl bg-red-50 text-red-700 font-bold text-sm">
+							Xóa
+						</button>
+					</div>
+
+				</div>
+			`).join('');
+		}
+
+		document.getElementById('user-form').onsubmit = async (e) => {
+
+			e.preventDefault();
+
+			const formData = Object.fromEntries(new FormData(e.target));
+
+			const { error } = await supabaseClient.rpc(
+				'create_app_user',
+				{
+					p_username: formData.username,
+					p_password: formData.password,
+					p_full_name: formData.full_name,
+					p_role: formData.role
+				}
+			);
+
+			if (error) {
+				alert(error.message);
+				return;
+			}
+
+			alert("Đã tạo tài khoản!");
+
+			toggleModal('modal-user', false);
+
+			e.target.reset();
+
+			await fetchUsers();
+		};
+
+        enhanceExcelFilters();
+        init();
+		checkLogin();
+    
+
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        function updateScrollTopButton() {
+            const btn = document.getElementById('scroll-top-btn');
+            if (!btn) return;
+
+            if (window.scrollY > 260) {
+                btn.classList.add('show');
+            } else {
+                btn.classList.remove('show');
+            }
+        }
+
+        window.addEventListener('scroll', updateScrollTopButton, { passive: true });
+        window.addEventListener('load', updateScrollTopButton);
+
+    </script>
+</body>
+</html>
