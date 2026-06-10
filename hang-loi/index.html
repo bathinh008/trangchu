@@ -21,7 +21,7 @@
     <!-- SheetJS for Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <!-- Camera Barcode Scanner -->
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <!-- Barcode Detector polyfill sẽ được nạp động bằng import() khi cần quét -->
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -827,6 +827,97 @@
             }
         }
 
+
+
+        #barcode-reader video,
+        #barcode-reader canvas {
+            border-radius: 14px;
+        }
+
+        @media (max-width: 768px) {
+            #barcode-reader {
+                min-height: 300px;
+            }
+        }
+
+
+        /* Barcode scanner: giới hạn khung camera, tránh vỡ layout */
+        #modal-barcode-scanner #barcode-reader {
+            width: 100%;
+            height: min(52vh, 360px);
+            max-height: 360px;
+            min-height: 220px;
+            aspect-ratio: 16 / 9;
+            position: relative;
+        }
+
+        #modal-barcode-scanner #barcode-reader video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover;
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            #modal-barcode-scanner #barcode-reader {
+                height: min(42vh, 280px);
+                max-height: 280px;
+                min-height: 200px;
+            }
+
+            #modal-barcode-scanner .max-w-md {
+                max-width: 96vw;
+            }
+        }
+
+
+
+        /* Mobile: ẩn nút nổi khi đang xem ảnh */
+        @media (max-width: 768px) {
+            body.image-modal-open #mobile-new-defect-btn,
+            body.image-modal-open #scroll-top-btn,
+            body.image-modal-open button[onclick*="scrollToTop"],
+            body.image-modal-open .scroll-top-btn {
+                display: none !important;
+                opacity: 0 !important;
+                visibility: hidden !important;
+                pointer-events: none !important;
+            }
+
+            body:has(#modal-image:not(.hidden)) #mobile-new-defect-btn,
+            body:has(#modal-image:not(.hidden)) #scroll-top-btn,
+            body:has(#modal-image:not(.hidden)) button[onclick*="scrollToTop"],
+            body:has(#modal-image:not(.hidden)) .scroll-top-btn {
+                display: none !important;
+                opacity: 0 !important;
+                visibility: hidden !important;
+                pointer-events: none !important;
+            }
+        }
+
+
+        /* Mobile: chặn kéo xuống tải lại trang và tối ưu vuốt tab */
+        @media (max-width: 768px) {
+            html,
+            body {
+                overscroll-behavior-y: none;
+                overscroll-behavior-x: none;
+                touch-action: pan-y;
+            }
+
+            body {
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .bottom-tab-bar,
+            #modal-image,
+            #modal-defect,
+            #modal-barcode-scanner,
+            #modal-password-change {
+                overscroll-behavior: contain;
+            }
+        }
+
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen pb-20 md:pb-0">
@@ -1559,8 +1650,8 @@
 
 
     <!-- Modal: Quét mã vạch bằng máy ảnh -->
-    <div id="modal-barcode-scanner" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[95] hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in">
+    <div id="modal-barcode-scanner" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[95] hidden flex items-center justify-center p-3">
+        <div class="bg-white rounded-2xl w-full max-w-md max-h-[92vh] shadow-2xl overflow-hidden animate-in flex flex-col">
             <div class="flex items-center justify-between p-4 border-b">
                 <div>
                     <h2 class="text-lg font-bold text-slate-800">Quét mã vạch</h2>
@@ -1571,10 +1662,13 @@
                 </button>
             </div>
 
-            <div class="p-4 space-y-3">
-                <div id="barcode-reader" class="w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-900"></div>
+            <div class="p-4 space-y-3 overflow-y-auto">
+                <div id="barcode-reader" class="w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-900 relative"></div>
                 <div id="barcode-scan-status" class="text-sm text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
                     Đang chuẩn bị camera...
+                </div>
+                <div class="text-xs text-slate-400 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
+                    Mẹo: giữ mã vạch thẳng, đủ sáng và nằm ngang trong khung để đọc chính xác hơn.
                 </div>
                 <button type="button" onclick="closeBarcodeScanner()"
                     class="w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold">
@@ -1933,6 +2027,7 @@
         const SUPABASE_URL = "https://fgujuuybphirvaebfgel.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWp1dXlicGhpcnZhZWJmZ2VsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwODEwNTAsImV4cCI6MjA4NjY1NzA1MH0.JJTnpEMvmOIUqCXFIJKx0yHCCNhmHc_wiMszw9UwkcI"; // Dán Anon Key của bạn vào đây
         // Web Push: thay bằng VAPID public key của bạn sau khi tạo bằng lệnh: npx web-push generate-vapid-keys
+
         const VAPID_PUBLIC_KEY = "BEvFCZMFzzESBkCKG1mMhgMl4u1z98Wy206w3-cbCTPRZopA-izDDdXcxW5091fCZz2lkOON8200tWKKOogwlWw";
         
         let supabaseClient;
@@ -4229,10 +4324,9 @@
             }
         });
 
-        window.switchTab = (tab) => {
+        window.switchTab = (tab, options = {}) => {
 
-			document.body.classList.remove('active-tab-dashboard', 'active-tab-history', 'active-tab-catalog', 'active-tab-users', 'active-tab-logs');
-			document.body.classList.add('active-tab-' + tab);
+            const silent = !!options.silent;
 
 			const toggleHidden = (id, hidden) => {
 				const el = document.getElementById(id);
@@ -4249,22 +4343,25 @@
 			}
 
 			if (tab === 'catalog' && !canManageData()) {
-				alert("Bạn không có quyền truy cập danh mục hàng hóa.");
+				if (!silent) alert("Bạn không có quyền truy cập danh mục hàng hóa.");
 				tab = 'dashboard';
 			}
 
 			if (tab === 'users' && !isAdmin()) {
 				const isMobileAccountTab = window.innerWidth <= 768;
 				if (!isMobileAccountTab) {
-					alert("Bạn không có quyền truy cập quản lý tài khoản.");
+					if (!silent) alert("Bạn không có quyền truy cập quản lý tài khoản.");
 					tab = 'dashboard';
 				}
 			}
 
 			if (tab === 'logs' && !isAdmin()) {
-				alert("Chỉ admin mới được xem nhật ký hoạt động.");
+				if (!silent) alert("Chỉ admin mới được xem nhật ký hoạt động.");
 				tab = 'dashboard';
 			}
+
+            document.body.classList.remove('active-tab-dashboard', 'active-tab-history', 'active-tab-catalog', 'active-tab-users', 'active-tab-logs');
+            document.body.classList.add('active-tab-' + tab);
 
 			// views
 			toggleHidden('view-dashboard', tab !== 'dashboard');
@@ -4364,13 +4461,20 @@
 			const fileName = `defect_${new Date().getTime()}.jpg`;
 			downloadLink.setAttribute('download', fileName);
 
-			modal.classList.remove('hidden');
+
+			toggleImageModal(true);
 		}
 
 		function toggleImageModal(show) {
 			const modal = document.getElementById('modal-image');
-			if (!show) {
+			if (!modal) return;
+
+			if (show) {
+				modal.classList.remove('hidden');
+				document.body.classList.add('image-modal-open');
+			} else {
 				modal.classList.add('hidden');
+				document.body.classList.remove('image-modal-open');
 				document.getElementById('full-res-image').src = ''; // Clear src để tránh giật hình khi mở lại
 			}
 		}
@@ -4409,9 +4513,18 @@
         
 
 
-        let html5QrCodeScanner = null;
+        let barcodeDetectorCtor = null;
+        let barcodeDetectorInstance = null;
+        let barcodeVideoEl = null;
+        let barcodeCanvasEl = null;
+        let barcodeCanvasCtx = null;
+        let barcodeScannerStream = null;
+        let barcodeDetectLoopTimer = null;
         let barcodeScannerRunning = false;
         let barcodeScannerLocked = false;
+        let barcodeScanCandidate = '';
+        let barcodeScanCandidateCount = 0;
+        let barcodeScanLastAt = 0;
 
         function setBarcodeScanStatus(message, type = 'info') {
             const el = document.getElementById('barcode-scan-status');
@@ -4423,16 +4536,173 @@
                     ? 'text-red-600 bg-red-50 border-red-200'
                     : type === 'success'
                         ? 'text-green-700 bg-green-50 border-green-200'
-                        : 'text-slate-500 bg-slate-50 border-slate-200'
+                        : type === 'warning'
+                            ? 'text-amber-700 bg-amber-50 border-amber-200'
+                            : 'text-slate-500 bg-slate-50 border-slate-200'
             );
+        }
+
+        function normalizeBarcodeText(value) {
+            return String(value || '')
+                .replace(/\s+/g, '')
+                .replace(/[^\d]/g, '')
+                .trim();
+        }
+
+        function isValidGtinChecksum(code) {
+            const digits = normalizeBarcodeText(code);
+
+            if (![8, 12, 13, 14].includes(digits.length)) return false;
+            if (!/^\d+$/.test(digits)) return false;
+
+            const numbers = digits.split('').map(Number);
+            const checkDigit = numbers.pop();
+
+            let sum = 0;
+            let weight = 3;
+
+            for (let i = numbers.length - 1; i >= 0; i--) {
+                sum += numbers[i] * weight;
+                weight = weight === 3 ? 1 : 3;
+            }
+
+            const expected = (10 - (sum % 10)) % 10;
+            return expected === checkDigit;
+        }
+
+        function isBarcodeInCatalog(code) {
+            const normalized = normalizeBarcodeText(code);
+            if (!normalized || !Array.isArray(catalogData) || catalogData.length === 0) return false;
+
+            return catalogData.some(item => normalizeBarcodeText(item.barcode) === normalized);
+        }
+
+        function resetBarcodeScanConfirm() {
+            barcodeScanCandidate = '';
+            barcodeScanCandidateCount = 0;
+            barcodeScanLastAt = 0;
         }
 
         function fillBarcodeFromCamera(code) {
             const barcodeInput = document.getElementById('auto-barcode');
             if (!barcodeInput) return;
 
-            barcodeInput.value = String(code || '').trim();
+            barcodeInput.value = normalizeBarcodeText(code);
             barcodeInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        async function ensureBarcodeDetectorSupport() {
+            if (barcodeDetectorCtor) return barcodeDetectorCtor;
+
+            if ('BarcodeDetector' in window) {
+                barcodeDetectorCtor = window.BarcodeDetector;
+                return barcodeDetectorCtor;
+            }
+
+            setBarcodeScanStatus('Đang tải thư viện barcode-detector...');
+            try {
+                const mod = await import('https://cdn.jsdelivr.net/npm/barcode-detector@2/dist/es/index.min.js');
+                barcodeDetectorCtor =
+                    mod.BarcodeDetector ||
+                    mod.default?.BarcodeDetector ||
+                    mod.default ||
+                    window.BarcodeDetector;
+
+                if (!barcodeDetectorCtor) {
+                    throw new Error('Không khởi tạo được BarcodeDetector từ CDN.');
+                }
+
+                return barcodeDetectorCtor;
+            } catch (error) {
+                console.error('Lỗi tải barcode-detector polyfill:', error);
+                throw new Error('Không tải được barcode-detector. Kiểm tra Internet hoặc trình duyệt.');
+            }
+        }
+
+        async function createBarcodeDetectorInstance() {
+            const Detector = await ensureBarcodeDetectorSupport();
+
+            let formats = ['ean_13', 'ean_8', 'upc_a', 'upc_e'];
+            try {
+                if (typeof Detector.getSupportedFormats === 'function') {
+                    const supported = await Detector.getSupportedFormats();
+                    const desired = ['ean_13', 'ean_8', 'upc_a', 'upc_e'];
+                    const filtered = desired.filter(f => supported.includes(f));
+                    if (filtered.length) formats = filtered;
+                }
+            } catch (error) {
+                console.warn('Không lấy được supported formats, dùng mặc định.', error);
+            }
+
+            return new Detector({ formats });
+        }
+
+        function buildBarcodeVideoUI() {
+            const mount = document.getElementById('barcode-reader');
+            if (!mount) return;
+
+            mount.innerHTML = '';
+
+            barcodeVideoEl = document.createElement('video');
+            barcodeVideoEl.setAttribute('playsinline', 'true');
+            barcodeVideoEl.setAttribute('autoplay', 'true');
+            barcodeVideoEl.setAttribute('muted', 'true');
+            barcodeVideoEl.className = 'w-full h-full object-cover rounded-xl';
+
+            const guide = document.createElement('div');
+            guide.className = 'absolute inset-0 pointer-events-none flex items-center justify-center';
+            guide.innerHTML = `
+                <div class="w-[92%] h-[28%] border-2 border-white/90 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.18)]"></div>
+            `;
+
+            mount.appendChild(barcodeVideoEl);
+            mount.appendChild(guide);
+
+            barcodeCanvasEl = document.createElement('canvas');
+            barcodeCanvasCtx = barcodeCanvasEl.getContext('2d', { willReadFrequently: true });
+        }
+
+        async function startBarcodeDetectLoop() {
+            if (!barcodeDetectorInstance) {
+                barcodeDetectorInstance = await createBarcodeDetectorInstance();
+            }
+
+            clearInterval(barcodeDetectLoopTimer);
+
+            barcodeDetectLoopTimer = setInterval(async () => {
+                if (!barcodeScannerRunning || barcodeScannerLocked || !barcodeVideoEl) return;
+                if (barcodeVideoEl.readyState < 2) return;
+
+                try {
+                    const barcodes = await barcodeDetectorInstance.detect(barcodeVideoEl);
+                    if (!barcodes || !barcodes.length) return;
+
+                    const preferred = barcodes.find(item => {
+                        const format = String(item.format || '').toLowerCase();
+                        return ['ean_13', 'ean_8', 'upc_a', 'upc_e'].includes(format);
+                    }) || barcodes[0];
+
+                    handleDetectedBarcodeValue(preferred.rawValue || '');
+                } catch (error) {
+                    console.warn('Lỗi detect barcode:', error);
+                }
+            }, 180);
+        }
+
+        function handleDetectedBarcodeValue(decodedText) {
+            if (barcodeScannerLocked) return;
+
+            const code = normalizeBarcodeText(decodedText);
+
+            if (!code) {
+                setBarcodeScanStatus('Chưa đọc được mã, giữ camera ổn định và quét lại...', 'warning');
+                return;
+            }
+
+            barcodeScannerLocked = true;
+            setBarcodeScanStatus('✓ Đã quét được: ' + code, 'success');
+            fillBarcodeFromCamera(code);
+            setTimeout(() => closeBarcodeScanner(), 350);
         }
 
         async function openBarcodeScanner() {
@@ -4441,132 +4711,135 @@
 
             modal.classList.remove('hidden');
             barcodeScannerLocked = false;
-            setBarcodeScanStatus('Đang mở camera...');
+            resetBarcodeScanConfirm();
+            setBarcodeScanStatus('Đang mở camera quét mã vạch...');
 
-            if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+            if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' && location.protocol !== 'file:') {
                 setBarcodeScanStatus('Trình duyệt chỉ cho quét camera khi web chạy HTTPS hoặc localhost.', 'error');
                 return;
             }
 
-            if (typeof Html5Qrcode === 'undefined') {
-                setBarcodeScanStatus('Chưa tải được thư viện quét mã vạch. Kiểm tra kết nối Internet rồi tải lại trang.', 'error');
-                return;
-            }
-
             try {
-                if (!html5QrCodeScanner) {
-                    html5QrCodeScanner = new Html5Qrcode('barcode-reader');
-                }
+                buildBarcodeVideoUI();
+                await ensureBarcodeDetectorSupport();
+                barcodeDetectorInstance = await createBarcodeDetectorInstance();
 
-                const config = {
-                    fps: 12,
-                    qrbox: function(viewfinderWidth, viewfinderHeight) {
-                        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-                        return {
-                            width: Math.floor(minEdge * 0.9),
-                            height: Math.floor(minEdge * 0.45)
-                        };
+                barcodeScannerStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: { ideal: 'environment' },
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
                     },
-                    formatsToSupport: [
-                        Html5QrcodeSupportedFormats.EAN_13,
-                        Html5QrcodeSupportedFormats.EAN_8,
-                        Html5QrcodeSupportedFormats.CODE_128,
-                        Html5QrcodeSupportedFormats.CODE_39,
-                        Html5QrcodeSupportedFormats.UPC_A,
-                        Html5QrcodeSupportedFormats.UPC_E,
-                        Html5QrcodeSupportedFormats.ITF,
-                        Html5QrcodeSupportedFormats.QR_CODE
-                    ]
-                };
+                    audio: false
+                });
 
-                await html5QrCodeScanner.start(
-                    { facingMode: 'environment' },
-                    config,
-                    async (decodedText) => {
-                        if (barcodeScannerLocked) return;
-                        barcodeScannerLocked = true;
-                        setBarcodeScanStatus('✓ Đã quét được: ' + decodedText, 'success');
-                        fillBarcodeFromCamera(decodedText);
-                        setTimeout(() => closeBarcodeScanner(), 350);
-                    },
-                    () => {}
-                );
+                barcodeVideoEl.srcObject = barcodeScannerStream;
+                await barcodeVideoEl.play();
 
                 barcodeScannerRunning = true;
-                setBarcodeScanStatus('Camera đã sẵn sàng. Đưa mã vạch vào giữa khung.');
-
+                setBarcodeScanStatus('Camera đã sẵn sàng. Quét được mã sẽ tự điền ngay.');
+                await startBarcodeDetectLoop();
             } catch (error) {
-                console.error('Lỗi mở camera quét mã vạch:', error);
-                setBarcodeScanStatus('Không mở được camera. Hãy cấp quyền Camera cho trình duyệt rồi thử lại.', 'error');
+                console.error('Lỗi mở barcode-detector:', error);
+                setBarcodeScanStatus(error.message || 'Không mở được camera. Hãy cấp quyền Camera rồi thử lại.', 'error');
             }
         }
 
         async function closeBarcodeScanner() {
             const modal = document.getElementById('modal-barcode-scanner');
 
+            clearInterval(barcodeDetectLoopTimer);
+            barcodeDetectLoopTimer = null;
+
             try {
-                if (html5QrCodeScanner && barcodeScannerRunning) {
-                    await html5QrCodeScanner.stop();
-                    await html5QrCodeScanner.clear();
+                if (barcodeVideoEl) {
+                    barcodeVideoEl.pause();
+                    barcodeVideoEl.srcObject = null;
+                }
+
+                if (barcodeScannerStream) {
+                    barcodeScannerStream.getTracks().forEach(track => track.stop());
                 }
             } catch (error) {
-                console.warn('Không dừng được camera hoặc camera đã dừng:', error);
+                console.warn('Không dừng được camera barcode:', error);
             }
 
+            barcodeScannerStream = null;
             barcodeScannerRunning = false;
             barcodeScannerLocked = false;
+            resetBarcodeScanConfirm();
 
             if (modal) modal.classList.add('hidden');
         }
 
+
         document.getElementById('auto-barcode').oninput = async (e) => {
 			const val = e.target.value.trim();
 			const statusMsg = document.getElementById('search-status');
-			
+
+			const setSearchStatus = (message, type = 'info') => {
+				if (!statusMsg) return;
+
+				statusMsg.innerText = message || '';
+				statusMsg.classList.remove(
+					'hidden',
+					'text-blue-600',
+					'text-orange-500',
+					'text-slate-400',
+					'text-red-500',
+					'text-green-600'
+				);
+
+				if (!message) {
+					statusMsg.classList.add('hidden');
+					return;
+				}
+
+				if (type === 'success') statusMsg.classList.add('text-blue-600');
+				else if (type === 'warning') statusMsg.classList.add('text-orange-500');
+				else if (type === 'error') statusMsg.classList.add('text-red-500');
+				else statusMsg.classList.add('text-slate-400');
+			};
+
 			// Nếu xóa trắng ô barcode thì xóa trắng các ô thông tin
 			if (!val) { 
-				statusMsg.classList.add('hidden'); 
+				setSearchStatus('');
 				resetDefectFields();
 				return; 
 			}
 
 			// 1. Tìm nhanh trong catalogData (dữ liệu đã load sẵn)
-			let found = catalogData.find(c => c.barcode === val);
+			let found = catalogData.find(c => String(c.barcode || '').trim() === val);
 
 			// 2. Nếu không thấy trong máy, thử truy vấn trực tiếp từ Supabase
 			if (!found && supabaseClient) {
-				statusMsg.innerText = "Đang tìm trong danh mục...";
-				statusMsg.classList.remove('hidden', 'text-blue-600');
-				statusMsg.classList.add('text-slate-400');
+				setSearchStatus("Đang tìm trong danh mục...", 'info');
 
 				const { data, error } = await supabaseClient
 					.from('catalog')
 					.select('*')
 					.eq('barcode', val)
 					.single();
-				
+
 				if (data) found = data;
 			}
 
 			// 3. Hiển thị kết quả
 			if (found) {
-					const supplier = normalizeSupplierFields(found);
-					document.getElementById('f-product_name').value = found.product_name || '';
-					document.getElementById('f-sku').value = found.sku || '';
-					document.getElementById('f-vendor_name').value = supplier.vendor_name;
-					document.getElementById('f-vendor_id').value = supplier.vendor_id;
-					document.getElementById('f-barcode').value = found.barcode || val;
-				
-				statusMsg.innerText = "✓ Đã tìm thấy thông tin!";
-				statusMsg.classList.remove('hidden', 'text-slate-400');
-				statusMsg.classList.add('text-blue-600');
+				const supplier = normalizeSupplierFields(found);
+				document.getElementById('f-product_name').value = found.product_name || '';
+				document.getElementById('f-sku').value = found.sku || '';
+				document.getElementById('f-vendor_name').value = supplier.vendor_name;
+				document.getElementById('f-vendor_id').value = supplier.vendor_id;
+				document.getElementById('f-barcode').value = found.barcode || val;
+
+				setSearchStatus("✓ Đã tìm thấy thông tin!", 'success');
 			} else {
-				statusMsg.innerText = "⚠ Không tìm thấy trong danh mục";
-				statusMsg.classList.remove('text-blue-600');
-				statusMsg.classList.add('text-orange-500');
+				setSearchStatus("⚠ Không tìm thấy trong danh mục", 'warning');
 				// Không reset fields ở đây để người dùng có thể tự nhập tay nếu là hàng mới
 			}
 		};
+
 
 		// Hàm hỗ trợ xóa trắng form
 		function resetDefectFields() {
@@ -5347,6 +5620,120 @@
         }
 
 
-		</script>
+		
+        // Mobile: chặn pull-to-refresh và vuốt trái/phải để chuyển tab kế bên
+        (function setupMobileSwipeTabsAndPullGuard() {
+            if (window.__mobileSwipeTabsAndPullGuardReady) return;
+            window.__mobileSwipeTabsAndPullGuardReady = true;
+
+            const allMobileTabs = ['dashboard', 'history', 'catalog', 'users', 'logs'];
+            let startX = 0;
+            let startY = 0;
+            let startTime = 0;
+            let maybePullingDown = false;
+
+            function isMobileViewport() {
+                return window.matchMedia('(max-width: 768px)').matches;
+            }
+
+            function isInteractiveTarget(target) {
+                return !!target.closest(
+                    'input, textarea, select, button, a, label, [contenteditable="true"], ' +
+                    '#modal-image, #modal-defect, #modal-catalog, #modal-barcode-scanner, #modal-password-change, ' +
+                    '.excel-filter-menu, .bottom-tab-bar'
+                );
+            }
+
+            function getCurrentMobileTab() {
+                const activeBodyClass = [...document.body.classList].find(cls => cls.startsWith('active-tab-'));
+                if (activeBodyClass) {
+                    const tab = activeBodyClass.replace('active-tab-', '');
+                    if (allMobileTabs.includes(tab)) return tab;
+                }
+
+                const activeView = document.querySelector('.view:not(.hidden)');
+                if (activeView && activeView.id) {
+                    return activeView.id.replace('view-', '');
+                }
+
+                return 'dashboard';
+            }
+
+            function goToAdjacentTab(direction) {
+                const current = getCurrentMobileTab();
+                const availableTabs = allMobileTabs.filter(tab => {
+                    if (tab === 'catalog') return typeof canManageData === 'function' && canManageData();
+                    if (tab === 'logs') return typeof isAdmin === 'function' && isAdmin();
+                    // Mobile vẫn cho staff/PO vào tab Tài khoản cá nhân, không vào quản lý tài khoản.
+                    return true;
+                });
+
+                const index = availableTabs.indexOf(current);
+                if (index === -1) return;
+
+                const nextIndex = index + direction;
+                if (nextIndex < 0 || nextIndex >= availableTabs.length) return;
+
+                if (typeof window.switchTab === 'function') {
+                    window.switchTab(availableTabs[nextIndex], { silent: true });
+                }
+            }
+
+            document.addEventListener('touchstart', function(e) {
+                if (!isMobileViewport() || e.touches.length !== 1) return;
+
+                const touch = e.touches[0];
+                startX = touch.clientX;
+                startY = touch.clientY;
+                startTime = Date.now();
+                maybePullingDown = window.scrollY <= 0 && startY < 90;
+            }, { passive: true });
+
+            document.addEventListener('touchmove', function(e) {
+                if (!isMobileViewport() || e.touches.length !== 1) return;
+
+                const touch = e.touches[0];
+                const deltaY = touch.clientY - startY;
+                const deltaX = touch.clientX - startX;
+
+                // Chặn kéo xuống ở đầu trang để tránh browser refresh.
+                if (maybePullingDown && window.scrollY <= 0 && deltaY > 8 && Math.abs(deltaY) > Math.abs(deltaX)) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+
+            document.addEventListener('touchend', function(e) {
+                if (!isMobileViewport()) return;
+                if (!startTime) return;
+
+                const target = e.target;
+                if (isInteractiveTarget(target)) return;
+
+                const touch = e.changedTouches && e.changedTouches[0];
+                if (!touch) return;
+
+                const deltaX = touch.clientX - startX;
+                const deltaY = touch.clientY - startY;
+                const elapsed = Date.now() - startTime;
+
+                startTime = 0;
+
+                // Vuốt ngang đủ dài, không quá chéo, không quá chậm.
+                if (elapsed > 650) return;
+                if (Math.abs(deltaX) < 70) return;
+                if (Math.abs(deltaX) < Math.abs(deltaY) * 1.35) return;
+
+                if (deltaX < 0) {
+                    // Vuốt trái: sang tab kế bên bên phải.
+                    goToAdjacentTab(1);
+                } else {
+                    // Vuốt phải: về tab kế bên bên trái.
+                    goToAdjacentTab(-1);
+                }
+            }, { passive: true });
+        })();
+
+
+</script>
 </body>
 </html>
