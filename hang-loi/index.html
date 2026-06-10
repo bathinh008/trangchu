@@ -2475,7 +2475,8 @@
                 <input type="text"
                     placeholder="Tìm trong danh sách lọc..."
                     class="w-full mb-2 px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                    oninput="filterExcelMenuOptions(this)">
+                    oninput="filterExcelMenuOptions(this)"
+                    onkeydown="handleExcelFilterEnter(event, '${tableName}', '${key}')">
 
                 <label class="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-slate-50 text-sm font-semibold text-slate-700 border-b border-slate-100 mb-1">
                     <input type="checkbox" class="excel-select-all" ${isAllChecked ? 'checked' : ''} onchange="toggleExcelSelectAll(this)">
@@ -2500,6 +2501,23 @@
             menu.classList.remove('hidden');
         }
 
+        function getVisibleExcelFilterBoxes(menu) {
+            return [...menu.querySelectorAll('.excel-filter-option')]
+                .filter(option => option.style.display !== 'none')
+                .map(option => option.querySelector('.excel-filter-checkbox'))
+                .filter(Boolean);
+        }
+
+        function updateExcelSelectAllState(menu) {
+            if (!menu) return;
+            const visibleBoxes = getVisibleExcelFilterBoxes(menu);
+            const selectAll = menu.querySelector('.excel-select-all');
+            if (selectAll) {
+                selectAll.checked = visibleBoxes.length > 0 && visibleBoxes.every(item => item.checked);
+                selectAll.indeterminate = visibleBoxes.some(item => item.checked) && !selectAll.checked;
+            }
+        }
+
         function filterExcelMenuOptions(input) {
             const query = input.value.toLowerCase().trim();
             const menu = input.closest('.excel-filter-menu');
@@ -2507,22 +2525,44 @@
 
             menu.querySelectorAll('.excel-filter-option').forEach(option => {
                 const text = option.innerText.toLowerCase();
-                option.style.display = text.includes(query) ? 'flex' : 'none';
+                const matched = !query || text.includes(query);
+                option.style.display = matched ? 'flex' : 'none';
+
+                // Giống Excel: khi nhập từ khóa lọc, chỉ giữ tick các kết quả đang hiện.
+                // Các dòng bị ẩn sẽ bỏ tick để bấm "Áp dụng" không còn hiểu là Select All.
+                const box = option.querySelector('.excel-filter-checkbox');
+                if (box && query) box.checked = matched;
             });
+
+            updateExcelSelectAllState(menu);
+        }
+
+        function handleExcelFilterEnter(event, tableName, key) {
+            if (event.key !== 'Enter') return;
+
+            event.preventDefault();
+            event.stopPropagation();
+            applyExcelFilter(tableName, key);
         }
 
         function toggleExcelSelectAll(checkbox) {
             const menu = checkbox.closest('.excel-filter-menu');
             if (!menu) return;
-            menu.querySelectorAll('.excel-filter-checkbox').forEach(item => item.checked = checkbox.checked);
+
+            // Nếu đang gõ tìm trong menu lọc thì Select All chỉ áp dụng cho các dòng đang hiện.
+            const searchQuery = menu.querySelector('input[type="text"]')?.value.trim() || '';
+            const boxes = searchQuery
+                ? getVisibleExcelFilterBoxes(menu)
+                : [...menu.querySelectorAll('.excel-filter-checkbox')];
+
+            boxes.forEach(item => item.checked = checkbox.checked);
+            updateExcelSelectAllState(menu);
         }
 
         function syncExcelSelectAll(checkbox) {
             const menu = checkbox.closest('.excel-filter-menu');
             if (!menu) return;
-            const boxes = [...menu.querySelectorAll('.excel-filter-checkbox')];
-            const selectAll = menu.querySelector('.excel-select-all');
-            if (selectAll) selectAll.checked = boxes.length > 0 && boxes.every(item => item.checked);
+            updateExcelSelectAllState(menu);
         }
 
         function applyExcelFilter(tableName, key) {
@@ -2530,11 +2570,15 @@
             if (!menu) return;
 
             const allValues = getFilterValues(tableName, key);
-            const checkedValues = [...menu.querySelectorAll('.excel-filter-checkbox:checked')].map(item => item.value);
+            const searchQuery = menu.querySelector('input[type="text"]')?.value.trim() || '';
+            const checkedBoxes = searchQuery
+                ? getVisibleExcelFilterBoxes(menu).filter(item => item.checked)
+                : [...menu.querySelectorAll('.excel-filter-checkbox:checked')];
+            const checkedValues = checkedBoxes.map(item => item.value);
 
             if (checkedValues.length === 0) {
                 tableFilterState[tableName][key] = ['__NO_MATCH__'];
-            } else if (checkedValues.length === allValues.length) {
+            } else if (!searchQuery && checkedValues.length === allValues.length) {
                 delete tableFilterState[tableName][key];
             } else {
                 tableFilterState[tableName][key] = checkedValues;
