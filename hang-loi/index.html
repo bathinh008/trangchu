@@ -4,7 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản lý hàng lỗi</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com">            };
+        }
+
+    
+        document.addEventListener('DOMContentLoaded', () => {
+            updateBodyRoleClass();
+            if (window.innerWidth <= 768 && currentRole !== 'admin') {
+                updateMobilePersonalAccount();
+            }
+        });
+
+    </script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 	<script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
     <!-- SheetJS for Excel -->
@@ -86,6 +97,13 @@
 
 			#connection-status {
 				font-size: 10px;
+				padding-left: 8px;
+				padding-right: 8px;
+				max-width: 100%;
+			}
+
+			#status-text {
+				white-space: nowrap;
 			}
 		}
 
@@ -333,6 +351,482 @@
             animation: loaderSpin .75s linear infinite;
         }
 
+
+
+
+
+        /* User dropdown: gộp nút Đăng xuất vào Xin chào */
+        .user-menu-wrap {
+            position: relative;
+        }
+
+        #user-menu-btn {
+            min-width: 138px;
+            text-align: right;
+        }
+
+        #user-menu-btn:hover {
+            background: #f8fafc;
+        }
+
+        #user-menu-panel {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            z-index: 95;
+            width: 220px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+            padding: 8px;
+            transform: translateY(-6px) scale(0.98);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .16s ease, transform .16s ease;
+        }
+
+        #user-menu-panel.show {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0) scale(1);
+        }
+
+        .user-menu-action {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #dc2626;
+            transition: background .15s ease;
+        }
+
+        .user-menu-action:hover {
+            background: #fef2f2;
+        }
+
+        @media (max-width: 768px) {
+            #user-menu-btn {
+                min-width: auto;
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+
+            #user-menu-btn .hello-label {
+                display: none;
+            }
+
+            #hello-user {
+                max-width: 92px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+        }
+
+
+        /* YouTube style side menu */
+        #side-menu-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: rgba(15, 23, 42, 0.35);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .2s ease;
+        }
+
+        #side-menu-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #side-menu-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            z-index: 101;
+            width: min(82vw, 290px);
+            background: #ffffff;
+            border-right: 1px solid #e2e8f0;
+            box-shadow: 18px 0 45px rgba(15, 23, 42, 0.18);
+            transform: translateX(-105%);
+            transition: transform .22s ease;
+        }
+
+        #side-menu-panel.show {
+            transform: translateX(0);
+        }
+
+        .side-menu-item {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 16px;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #334155;
+            transition: background .15s ease, color .15s ease;
+        }
+
+        .side-menu-item:hover,
+        .side-menu-item.active {
+            background: #eff6ff;
+            color: #2563eb;
+        }
+
+        .side-menu-item i {
+            width: 22px;
+            text-align: center;
+            font-size: 17px;
+        }
+
+        @media (max-width: 768px) {
+            #mobile-bottom-nav {
+                display: none !important;
+            }
+            body {
+                padding-bottom: 0 !important;
+            }
+        }
+
+
+        /* Mobile tabs: giữ lại tab dưới tiện thao tác */
+        @media (max-width: 768px) {
+            #mobile-bottom-nav {
+                display: grid !important;
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+                left: 0;
+                right: 0;
+                bottom: 0;
+                padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+                background: rgba(255, 255, 255, 0.96);
+                backdrop-filter: blur(14px);
+                -webkit-backdrop-filter: blur(14px);
+                border-top: 1px solid #e2e8f0;
+                box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.10);
+            }
+
+            #mobile-bottom-nav button {
+                min-height: 58px;
+                border-radius: 14px;
+                transition: background .18s ease, color .18s ease, transform .18s ease;
+            }
+
+            #mobile-bottom-nav button:active {
+                transform: scale(0.96);
+            }
+
+            #mobile-bottom-nav button i {
+                font-size: 18px;
+            }
+
+            #mobile-bottom-nav button span {
+                font-size: 11px;
+                line-height: 1;
+            }
+
+            #mobile-new-defect-btn {
+                display: inline-flex !important;
+                right: 18px;
+                bottom: calc(96px + env(safe-area-inset-bottom));
+                z-index: 88;
+            }
+
+            body {
+                padding-bottom: 86px;
+            }
+        }
+
+        @media (min-width: 769px) {
+            #mobile-bottom-nav {
+                display: none !important;
+            }
+        }
+
+
+        /* Mobile account subtabs */
+        .account-subtab-btn {
+            border-radius: 14px;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 800;
+            color: #64748b;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            transition: all .18s ease;
+        }
+
+        .account-subtab-btn.active {
+            color: #2563eb;
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            box-shadow: 0 8px 18px rgba(37, 99, 235, 0.12);
+        }
+
+        .account-subview.hidden {
+            display: none;
+        }
+
+        .personal-account-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 22px;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+            overflow: hidden;
+        }
+
+        .personal-account-avatar {
+            width: 62px;
+            height: 62px;
+            border-radius: 20px;
+            display: grid;
+            place-items: center;
+            color: white;
+            background: linear-gradient(135deg, #2563eb, #06b6d4);
+            box-shadow: 0 14px 25px rgba(37, 99, 235, 0.24);
+        }
+
+        @media (min-width: 769px) {
+            #users-account-subtabs,
+            #account-personal-subview {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            #users-management-subview.hidden,
+            #account-personal-subview.hidden {
+                display: none !important;
+            }
+        }
+
+
+        /* Mobile: ẩn tài khoản trên header vì đã đưa vào tab Tài khoản cá nhân */
+        @media (max-width: 768px) {
+            header .user-menu-wrap {
+                display: none !important;
+            }
+        }
+
+
+        /* Mobile: ẩn nút menu 3 gạch trên header */
+        @media (max-width: 768px) {
+            #header-menu-toggle {
+                display: none !important;
+            }
+        }
+
+
+        /* Mobile: đưa badge kết nối xuống dưới tiêu đề */
+        @media (max-width: 768px) {
+            header .max-w-7xl > .flex.items-center.gap-3.min-w-0.flex-1 {
+                flex-wrap: wrap;
+                align-items: center;
+                row-gap: 6px;
+            }
+
+            header .max-w-7xl > .flex.items-center.gap-3.min-w-0.flex-1 h1 {
+                flex: 1 1 auto;
+                min-width: 0;
+            }
+
+            #connection-status {
+                order: 10;
+                flex: 0 0 auto;
+                margin-left: 52px;
+                margin-top: 0;
+                width: fit-content;
+                max-width: calc(100% - 52px);
+            }
+        }
+
+
+        /* Mobile: tab Tài khoản hiện cho staff/user và PO */
+        @media (max-width: 768px) {
+            #m-tab-users.mobile-account-tab {
+                display: flex !important;
+            }
+
+            body:not(.role-admin) #account-subtab-manage {
+                display: none !important;
+            }
+
+            body:not(.role-admin) #users-management-subview {
+                display: none !important;
+            }
+
+            body:not(.role-admin) #users-account-subtabs {
+                grid-template-columns: 1fr;
+            }
+        }
+
+
+        /* Desktop account dropdown: form đổi mật khẩu */
+        #desktop-password-form input {
+            min-width: 230px;
+        }
+
+        @media (min-width: 769px) {
+            #user-menu-panel {
+                min-width: 260px;
+            }
+        }
+
+
+        /* Mobile: chừa khoảng trống cuối danh sách để bottom tab không che item cuối */
+        @media (max-width: 768px) {
+            main {
+                padding-bottom: 120px !important;
+            }
+
+            #defect-mobile-list,
+            #history-mobile-list,
+            #catalog-mobile-list,
+            #users-mobile-list,
+            #logs-mobile-list {
+                padding-bottom: 120px;
+            }
+
+            #scroll-top-btn {
+                bottom: 102px;
+            }
+        }
+
+
+        /* PC: nới rộng vùng nội dung, mobile vẫn full gọn */
+        @media (max-width: 768px) {
+            main[id^="view-"] {
+                width: 100% !important;
+                max-width: none !important;
+            }
+
+            header .max-w-7xl,
+            header .w-\[94\%\] {
+                width: 100% !important;
+                max-width: none !important;
+            }
+        }
+
+
+        /* Hàng nút chức năng: cuộn ngang khi nhiều nút */
+        .action-scroll-row {
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .action-scroll-row > button,
+        .action-scroll-row > input {
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+
+        .action-scroll-row::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .action-scroll-row::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .action-scroll-row::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 999px;
+        }
+
+        .action-scroll-row::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        @media (max-width: 768px) {
+            .action-scroll-row {
+                justify-content: flex-start !important;
+                margin-left: -4px;
+                margin-right: -4px;
+                padding-left: 4px;
+                padding-right: 4px;
+            }
+        }
+
+
+        /* Mobile: các hàng nút ở Danh mục và Lịch sử cũng cuộn ngang */
+        @media (max-width: 768px) {
+            #view-catalog .action-scroll-row,
+            #view-history .action-scroll-row {
+                flex-wrap: nowrap !important;
+            }
+
+            #view-catalog .action-scroll-row > button,
+            #view-history .action-scroll-row > button {
+                flex: 0 0 auto;
+            }
+        }
+
+
+        /* Mobile: khôi phục nút nổi thêm báo lỗi */
+        @media (max-width: 768px) {
+            #mobile-new-defect-btn {
+                display: inline-flex !important;
+                right: 18px;
+                bottom: calc(96px + env(safe-area-inset-bottom));
+                z-index: 88;
+                box-shadow: 0 14px 30px rgba(37, 99, 235, 0.35);
+            }
+
+            body.modal-open #mobile-new-defect-btn {
+                display: none !important;
+            }
+        }
+
+        @media (min-width: 769px) {
+            #mobile-new-defect-btn {
+                display: none !important;
+            }
+        }
+
+
+        /* Mobile: đẩy nút lên đầu trang cao hơn để không che item cuối và không đè nút thêm báo lỗi */
+        @media (max-width: 768px) {
+            #scroll-top-btn {
+                right: 18px;
+                bottom: calc(168px + env(safe-area-inset-bottom)) !important;
+                z-index: 87;
+            }
+
+            #mobile-new-defect-btn {
+                right: 18px;
+                bottom: calc(96px + env(safe-area-inset-bottom)) !important;
+                z-index: 88;
+            }
+        }
+
+
+        /* Mobile: nút + Báo lỗi chỉ hiện ở tab Báo lỗi */
+        @media (max-width: 768px) {
+            #mobile-new-defect-btn {
+                display: none !important;
+            }
+
+            body.active-tab-dashboard:not(.modal-open) #mobile-new-defect-btn {
+                display: inline-flex !important;
+            }
+        }
+
+
+        /* Mobile: ẩn badge kết nối thành công cho gọn header */
+        @media (max-width: 768px) {
+            #connection-status {
+                display: none !important;
+            }
+        }
+
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen pb-20 md:pb-0">
@@ -382,14 +876,23 @@
 
     <!-- Header -->
     <header class="bg-white border-b sticky top-0 z-10">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <div class="p-2 bg-blue-600 rounded-lg">
+        <div class="w-[94%] max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+                <button id="header-menu-toggle" type="button" onclick="toggleSideMenu(true)"
+                    class="w-10 h-10 rounded-xl hover:bg-slate-100 text-slate-700 flex items-center justify-center transition-colors shrink-0"
+                    title="Mở menu" aria-label="Mở menu">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <div class="p-2 bg-blue-600 rounded-lg shrink-0">
                     <i class="fas fa-box text-white text-xl"></i>
                 </div>
-                <h1 class="text-xl font-bold tracking-tight">Quản lý hàng lỗi</h1>
+                <h1 class="text-lg md:text-xl font-bold tracking-tight truncate">Quản lý hàng lỗi</h1>
+                <div id="connection-status" class="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full flex items-center gap-2 shrink-0">
+                    <span id="status-dot" class="w-2 h-2 rounded-full bg-yellow-400"></span>
+                    <span id="status-text">Đang kết nối Supabase...</span>
+                </div>
             </div>
-            <nav class="hidden md:flex gap-8">
+            <nav id="top-tab-nav" class="hidden">
 				<button onclick="switchTab('dashboard')" id="tab-dashboard" class="py-5 px-1 tab-active transition-all">Báo cáo lỗi</button>
 				<button onclick="switchTab('history')" id="tab-history" class="py-5 px-1 text-slate-500 hover:text-blue-600 transition-all">Lịch sử</button>
 				<button onclick="switchTab('catalog')" id="tab-catalog" class="admin-po-only py-5 px-1 text-slate-500 hover:text-blue-600 transition-all">
@@ -407,17 +910,35 @@
 					Nhật ký
 				</button>
 			</nav>
-			<div class="flex items-center gap-3">
+			<div class="flex items-center gap-3 ml-auto shrink-0">
 
-				<div class="hidden md:flex flex-col items-end">
-					<span class="text-sm text-slate-400">
-						Xin chào,
-					</span>
+				<div class="user-menu-wrap">
+					<button id="user-menu-btn" type="button" onclick="toggleUserMenu()"
+						class="flex items-center gap-2 rounded-xl px-3 py-2 transition-colors"
+						title="Tài khoản">
+						<div class="flex flex-col items-end leading-tight">
+							<span class="hello-label text-xs text-slate-400">Xin chào,</span>
+							<span id="hello-user" class="font-bold text-slate-700">Người dùng</span>
+						</div>
+						<i class="fas fa-chevron-down text-xs text-slate-400"></i>
+					</button>
 
-					<span id="hello-user"
-						class="font-bold text-slate-700">
-						Người dùng
-					</span>
+					<div id="user-menu-panel" aria-hidden="true">
+						<div class="px-3 py-2 border-b border-slate-100 mb-1">
+							<div class="text-xs text-slate-400">Đang đăng nhập</div>
+							<div id="user-menu-name" class="font-bold text-slate-700 truncate">Người dùng</div>
+						</div>
+
+						<button onclick="toggleUserMenu(false); openPasswordPopup()" class="user-menu-action text-blue-600">
+							<i class="fas fa-key"></i>
+							<span>Đổi mật khẩu</span>
+						</button>
+
+						<button onclick="toggleUserMenu(false); logoutApp()" class="user-menu-action text-red-600">
+							<i class="fas fa-right-from-bracket"></i>
+							<span>Đăng xuất</span>
+						</button>
+					</div>
 				</div>
 
 				<button onclick="toggleNotificationsPanel()"
@@ -428,21 +949,57 @@
 						class="hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold items-center justify-center">0</span>
 				</button>
 
-				<button onclick="logoutApp()" 
-					class="text-sm bg-red-50 text-red-600 px-3 py-1 rounded-lg font-semibold">
-					Đăng xuất
-				</button>
-
 			</div>
-            <div id="connection-status" class="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full flex items-center gap-2">
-                <span id="status-dot" class="w-2 h-2 rounded-full bg-yellow-400"></span> <span id="status-text">Đang kết nối Supabase...</span>
-            </div>
         </div>
     </header>
 
+    <!-- YouTube style side menu: gộp các tab vào nút 3 gạch -->
+    <div id="side-menu-overlay" onclick="toggleSideMenu(false)"></div>
+    <aside id="side-menu-panel" aria-hidden="true">
+        <div class="h-16 px-4 flex items-center gap-3 border-b border-slate-100">
+            <button type="button" onclick="toggleSideMenu(false)"
+                class="w-10 h-10 rounded-xl hover:bg-slate-100 text-slate-700 flex items-center justify-center transition-colors"
+                title="Đóng menu" aria-label="Đóng menu">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+            <div class="p-2 bg-blue-600 rounded-lg">
+                <i class="fas fa-box text-white text-lg"></i>
+            </div>
+            <div class="font-extrabold text-slate-800 leading-tight">Quản lý hàng lỗi</div>
+        </div>
+
+        <div class="p-3 space-y-1">
+            <button onclick="switchTab('dashboard'); toggleSideMenu(false);" id="side-tab-dashboard" class="side-menu-item active">
+                <i class="fas fa-clipboard-list"></i>
+                <span>Báo cáo lỗi</span>
+            </button>
+
+            <button onclick="switchTab('history'); toggleSideMenu(false);" id="side-tab-history" class="side-menu-item">
+                <i class="fas fa-clock-rotate-left"></i>
+                <span>Lịch sử</span>
+            </button>
+
+            <button onclick="switchTab('catalog'); toggleSideMenu(false);" id="side-tab-catalog" class="admin-po-only side-menu-item">
+                <i class="fas fa-boxes-stacked"></i>
+                <span>Danh mục hàng hóa</span>
+            </button>
+
+            <button onclick="switchTab('users'); toggleSideMenu(false);" id="side-tab-users" class="admin-only side-menu-item">
+                <i class="fas fa-users-gear"></i>
+                <span>Quản lý tài khoản</span>
+            </button>
+
+            <button onclick="switchTab('logs'); toggleSideMenu(false);" id="side-tab-logs" class="admin-only side-menu-item">
+                <i class="fas fa-clipboard-list"></i>
+                <span>Nhật ký</span>
+            </button>
+        </div>
+    </aside>
+
+
 	<!-- Mobile Bottom Nav -->
 	<nav id="mobile-bottom-nav"
-		class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(15,23,42,0.08)] px-2 py-2 grid grid-cols-5 gap-1">
+		class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(15,23,42,0.08)] px-2 py-2 grid grid-cols-5 gap-1">
 
 		<button onclick="switchTab('dashboard')" id="m-tab-dashboard"
 			class="flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-blue-600 bg-blue-50 font-semibold text-[11px]">
@@ -452,7 +1009,7 @@
 
 		<button onclick="switchTab('history')" id="m-tab-history"
 			class="flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-slate-500 font-semibold text-[11px]">
-			<i class="fas fa-clock-rotate-left text-lg"></i>
+			<i class="fas fa-rotate-left text-lg"></i>
 			<span>Lịch sử</span>
 		</button>
 
@@ -463,7 +1020,7 @@
 		</button>
 
 		<button onclick="switchTab('users')" id="m-tab-users"
-			class="admin-only flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-slate-500 font-semibold text-[11px]">
+			class="mobile-account-tab flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-slate-500 font-semibold text-[11px]">
 			<i class="fas fa-users-gear text-lg"></i>
 			<span>Tài khoản</span>
 		</button>
@@ -477,7 +1034,7 @@
 	</nav>
 
     <!-- Dashboard View -->
-    <main id="view-dashboard" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main id="view-dashboard" class="w-[94%] max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Stats Dashboard -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
             <div class="bg-white border border-slate-200 p-4 md:p-5 rounded-2xl shadow-sm">
@@ -511,21 +1068,58 @@
         </div>
 
         <!-- Controls -->
-        <div class="flex flex-col md:flex-row gap-4 mb-6 justify-between items-center">
-            <div class="relative w-full md:w-96">
-                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                <input 
-                    type="text" 
-                    id="search-input"
-                    placeholder="Tìm theo sản phẩm, ITEM, tên NCC hoặc mã NCC..."
-                    class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                >
+        <div class="mb-6 space-y-4">
+            <!-- Hàng 1: nút chức năng -->
+            <div class="action-scroll-row flex gap-2 justify-end overflow-x-auto pb-2">
+                <button onclick="downloadDefectSampleExcel()"
+                    class="admin-po-only bg-white hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg flex items-center gap-2 border border-slate-200 transition-colors">
+                    <i class="fas fa-download text-blue-600"></i>
+                    File mẫu
+                </button>
+
+                <button onclick="document.getElementById('defect-excel-input').click()"
+                    class="admin-po-only bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-4 py-2 rounded-lg flex items-center gap-2 border border-emerald-200 transition-colors">
+                    <i class="fas fa-file-import"></i>
+                    Nhập Excel
+                </button>
+
+                <input type="file" id="defect-excel-input" class="hidden" accept=".xlsx, .xls">
+
+                <button onclick="exportDefectsToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+                    <i class="fas fa-file-excel"></i> Xuất Excel
+                </button>
+
+                <button onclick="resetTableFilters('dashboard')"
+                    class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg flex items-center gap-2 border border-slate-200 transition-colors">
+                    <i class="fas fa-rotate-left text-blue-600"></i> Reset lọc
+                </button>
+
+                <button onclick="deleteAllDefects()" 
+                    class="admin-only bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+                    <i class="fas fa-trash-alt"></i>
+                    Xóa tất cả
+                </button>
+
+                <button onclick="toggleModal('modal-defect', true)" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+                    <i class="fas fa-plus"></i> Báo lỗi mới
+                </button>
             </div>
-            
-            <div class="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+
+            <!-- Hàng 2: ô tìm kiếm + lọc trạng thái -->
+            <div class="flex flex-col md:flex-row gap-3 md:items-center">
+                <div class="relative w-full md:max-w-xl">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input 
+                        type="text" 
+                        id="search-input"
+                        placeholder="Tìm theo sản phẩm, ITEM, tên NCC hoặc mã NCC..."
+                        class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    >
+                </div>
+
                 <select 
                     id="filter-status"
-                    class="bg-white border border-slate-200 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+                    class="w-full md:w-56 bg-white border border-slate-200 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500"
                     onchange="renderDashboard()"
                 >
                     <option value="All">Tất cả trạng thái</option>
@@ -533,42 +1127,6 @@
                     <option value="Fixing">Đang sửa</option>
                     <option value="Resolved">Đã hoàn thành</option>
                 </select>
-                <div class="grid grid-cols-2 md:flex gap-2">
-					<button onclick="downloadDefectSampleExcel()"
-						class="admin-po-only bg-white hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg flex items-center gap-2 border border-slate-200 transition-colors">
-						
-						<i class="fas fa-download text-blue-600"></i>
-						File mẫu
-					</button>
-
-					<button onclick="document.getElementById('defect-excel-input').click()"
-						class="admin-po-only bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-4 py-2 rounded-lg flex items-center gap-2 border border-emerald-200 transition-colors">
-
-						<i class="fas fa-file-import"></i>
-						Nhập Excel
-					</button>
-
-					<input type="file" id="defect-excel-input" class="hidden" accept=".xlsx, .xls">
-
-					<button onclick="exportDefectsToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
-						<i class="fas fa-file-excel"></i> Xuất Excel
-					</button>
-
-					<button onclick="resetTableFilters('dashboard')"
-						class="hidden md:flex bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg items-center gap-2 border border-slate-200 transition-colors">
-						<i class="fas fa-rotate-left text-blue-600"></i> Reset lọc
-					</button>
-
-					<button onclick="deleteAllDefects()" 
-						class="admin-only bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
-						<i class="fas fa-trash-alt"></i>
-						Xóa tất cả
-					</button>
-
-					<button onclick="toggleModal('modal-defect', true)" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
-						<i class="fas fa-plus"></i> Báo lỗi mới
-					</button>
-				</div>
             </div>
         </div>
 
@@ -607,28 +1165,16 @@
     </main>
 
     <!-- Catalog View -->
-    <main id="view-catalog" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
-        <div class="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-6">
-
-			<!-- LEFT -->
-			<div class="w-full md:w-auto">
-
+    <main id="view-catalog" class="w-[94%] max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
+        <div class="mb-6 space-y-4">
+			<div>
 				<h2 class="text-2xl font-bold">
 					Danh mục hàng hóa
 				</h2>
-
-				<div class="relative w-full md:w-96 mt-3">
-					<i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-
-					<input id="catalog-search" type="text"
-						placeholder="Tìm barcode, tên sản phẩm, ITEM, tên NCC hoặc mã NCC..."
-						class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
-				</div>
-
 			</div>
 
-			<!-- RIGHT -->
-			<div class="grid grid-cols-2 md:flex gap-2 w-full md:w-auto">
+			<!-- Hàng 1: nút chức năng -->
+			<div class="action-scroll-row flex gap-2 w-full overflow-x-auto pb-2">
 
 				<button onclick="downloadSampleExcel()" 
 					class="admin-po-only bg-white hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl flex items-center gap-2 border border-slate-200 shadow-sm">
@@ -655,6 +1201,14 @@
 
 			</div>
 
+			<!-- Hàng 2: ô tìm kiếm -->
+			<div class="relative w-full md:max-w-xl">
+				<i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+
+				<input id="catalog-search" type="text"
+					placeholder="Tìm barcode, tên sản phẩm, ITEM, tên NCC hoặc mã NCC..."
+					class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+			</div>
 		</div>
         <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm desktop-table">
             <div class="overflow-x-auto">
@@ -687,11 +1241,9 @@
     </main>
 
 	<!-- History View -->
-	<main id="view-history" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
-		<div class="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-6">
-
-			<!-- LEFT -->
-			<div class="w-full md:w-auto">
+	<main id="view-history" class="w-[94%] max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
+		<div class="mb-6 space-y-4">
+			<div>
 				<h2 class="text-2xl font-bold text-slate-800">
 					Lịch sử hàng lỗi đã xử lý
 				</h2>
@@ -701,17 +1253,8 @@
 				</p>
 			</div>
 
-			<!-- CENTER -->
-			<div class="relative w-full md:w-96">
-				<i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-
-				<input id="history-search" type="text"
-					placeholder="Tìm lịch sử theo sản phẩm, ITEM, barcode, tên NCC hoặc mã NCC..."
-					class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
-			</div>
-
-			<!-- RIGHT -->
-			<div class="flex gap-2 w-full md:w-auto">
+			<!-- Hàng 1: nút chức năng -->
+			<div class="action-scroll-row flex gap-2 w-full overflow-x-auto pb-2">
 				<button onclick="exportHistoryToExcel()" 
 					class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap">
 
@@ -720,7 +1263,7 @@
 				</button>
 
 				<button onclick="resetTableFilters('history')"
-					class="hidden md:flex bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg items-center gap-2 border border-slate-200 transition-colors whitespace-nowrap">
+					class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg flex items-center gap-2 border border-slate-200 transition-colors whitespace-nowrap">
 					<i class="fas fa-rotate-left text-blue-600"></i>
 					Reset lọc
 				</button>
@@ -730,6 +1273,15 @@
 					<i class="fas fa-trash-alt"></i>
 					Xóa lịch sử
 				</button>
+			</div>
+
+			<!-- Hàng 2: ô tìm kiếm -->
+			<div class="relative w-full md:max-w-xl">
+				<i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+
+				<input id="history-search" type="text"
+					placeholder="Tìm lịch sử theo sản phẩm, ITEM, barcode, tên NCC hoặc mã NCC..."
+					class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
 			</div>
 
 		</div>
@@ -769,7 +1321,65 @@
 	</main>
 
 	<!-- View Users -->
-	<main id="view-users" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
+	<main id="view-users" class="w-[94%] max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
+
+        <!-- Mobile: tab con trong mục Tài khoản -->
+        <div id="users-account-subtabs" class="md:hidden grid grid-cols-2 gap-2 mb-4">
+            <button id="account-subtab-manage" type="button" onclick="switchAccountSubTab('manage')" class="account-subtab-btn active">
+                <i class="fas fa-users-gear mr-1"></i>
+                Quản lý tài khoản
+            </button>
+            <button id="account-subtab-personal" type="button" onclick="switchAccountSubTab('personal')" class="account-subtab-btn">
+                <i class="fas fa-user mr-1"></i>
+                Tài khoản cá nhân
+            </button>
+        </div>
+
+        <div id="account-personal-subview" class="account-subview hidden">
+            <div class="personal-account-card">
+                <div class="p-5 bg-gradient-to-br from-blue-50 to-cyan-50 border-b border-slate-100">
+                    <div class="flex items-center gap-4">
+                        <div class="personal-account-avatar">
+                            <i class="fas fa-user text-2xl"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-xs text-slate-500 font-semibold">Xin chào,</div>
+                            <div id="mobile-personal-name" class="text-lg font-black text-slate-800 truncate">Người dùng</div>
+                            <div id="mobile-personal-role" class="text-xs text-blue-600 font-bold mt-1">Nhân viên</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-4 space-y-3">
+                    <div class="bg-slate-50 border border-slate-100 rounded-2xl p-3">
+                        <div class="text-xs text-slate-400 mb-1">Tài khoản</div>
+                        <div id="mobile-personal-username" class="font-bold text-slate-700 break-all">-</div>
+                    </div>
+
+                    <button type="button" onclick="openPasswordPopup()"
+                        class="w-full py-3 rounded-2xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold border border-blue-100 flex items-center justify-center gap-2">
+                        <i class="fas fa-key"></i>
+                        Đổi mật khẩu
+                    </button>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" onclick="toggleNotificationsPanel()"
+                            class="py-3 rounded-2xl bg-blue-50 text-blue-700 font-bold border border-blue-100 flex items-center justify-center gap-2">
+                            <i class="fas fa-bell"></i>
+                            Thông báo
+                        </button>
+
+                        <button type="button" onclick="logoutApp()"
+                            class="py-3 rounded-2xl bg-red-50 text-red-600 font-bold border border-red-100 flex items-center justify-center gap-2">
+                            <i class="fas fa-right-from-bracket"></i>
+                            Đăng xuất
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="users-management-subview" class="account-subview">
 
 		<div class="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-6">
 
@@ -836,10 +1446,12 @@
 		</div>
 		<div id="users-mobile-list" class="mobile-card-list space-y-3"></div>
 
+        </div>
+
 	</main>
 
 	<!-- View Logs - chỉ admin -->
-	<main id="view-logs" class="admin-only max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
+	<main id="view-logs" class="admin-only w-[94%] max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
 		<div class="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-6">
 			<div class="w-full md:w-auto">
 				<h2 class="text-2xl font-bold text-slate-800">Nhật ký hoạt động</h2>
@@ -1176,6 +1788,51 @@
 			</form>
 		</div>
 	</div>
+
+
+    <!-- Modal: Đổi mật khẩu dùng chung PC/Mobile -->
+    <div id="modal-password-change"
+        class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[95] hidden flex items-center justify-center p-4"
+        onclick="closePasswordPopup()">
+
+        <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden animate-in"
+            onclick="event.stopPropagation()">
+
+            <form id="popup-password-form" onsubmit="changePersonalPassword(event)" class="p-5 space-y-3">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h2 class="text-lg font-black text-slate-800">Đổi mật khẩu</h2>
+                        <p class="text-xs text-slate-400 mt-1">Cập nhật mật khẩu đăng nhập của bạn</p>
+                    </div>
+
+                    <button type="button" onclick="closePasswordPopup()"
+                        class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <input id="popup-current-password" type="password" autocomplete="current-password"
+                    placeholder="Mật khẩu hiện tại"
+                    class="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+
+                <input id="popup-new-password" type="password" autocomplete="new-password"
+                    placeholder="Mật khẩu mới"
+                    class="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+
+                <input id="popup-confirm-password" type="password" autocomplete="new-password"
+                    placeholder="Nhập lại mật khẩu mới"
+                    class="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+
+                <p id="popup-password-message" class="hidden text-xs font-semibold"></p>
+
+                <button id="popup-password-submit" type="submit"
+                    class="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center justify-center gap-2">
+                    <i class="fas fa-shield-halved"></i>
+                    Lưu mật khẩu mới
+                </button>
+            </form>
+        </div>
+    </div>
 
 
 	<!-- Notification Panel -->
@@ -2274,11 +2931,14 @@
 
 		function updateHelloUser() {
 
+			const displayName = currentDisplayName || currentUser?.full_name || currentUser?.username || currentUser?.email || 'Người dùng';
+			const username = currentUser?.username || currentUser?.email || displayName;
+
 			const el = document.getElementById('hello-user');
+			const menuNameEl = document.getElementById('user-menu-name');
 
-			if (!el) return;
-
-			el.innerText = currentDisplayName || 'Người dùng';
+			if (el) el.innerText = displayName;
+			if (menuNameEl) menuNameEl.innerText = username;
 		}
 
 
@@ -3534,7 +4194,45 @@
 
 		});
 
+
+
+
+        window.toggleUserMenu = (show) => {
+            const panel = document.getElementById('user-menu-panel');
+            if (!panel) return;
+            const shouldShow = typeof show === 'boolean' ? show : !panel.classList.contains('show');
+            panel.classList.toggle('show', shouldShow);
+            panel.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+        };
+
+        document.addEventListener('click', (e) => {
+            const wrap = e.target.closest('.user-menu-wrap');
+            if (!wrap) toggleUserMenu(false);
+        });
+
+        window.toggleSideMenu = (show) => {
+            const overlay = document.getElementById('side-menu-overlay');
+            const panel = document.getElementById('side-menu-panel');
+            if (overlay) overlay.classList.toggle('show', !!show);
+            if (panel) {
+                panel.classList.toggle('show', !!show);
+                panel.setAttribute('aria-hidden', show ? 'false' : 'true');
+            }
+            document.body.classList.toggle('modal-open', !!show);
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closePasswordPopup();
+                toggleSideMenu(false);
+                toggleUserMenu(false);
+            }
+        });
+
         window.switchTab = (tab) => {
+
+			document.body.classList.remove('active-tab-dashboard', 'active-tab-history', 'active-tab-catalog', 'active-tab-users', 'active-tab-logs');
+			document.body.classList.add('active-tab-' + tab);
 
 			const toggleHidden = (id, hidden) => {
 				const el = document.getElementById(id);
@@ -3546,14 +4244,21 @@
 				if (el) el.classList.toggle(className, enabled);
 			};
 
+			if (typeof updateBodyRoleClass === 'function') {
+				updateBodyRoleClass();
+			}
+
 			if (tab === 'catalog' && !canManageData()) {
 				alert("Bạn không có quyền truy cập danh mục hàng hóa.");
 				tab = 'dashboard';
 			}
 
 			if (tab === 'users' && !isAdmin()) {
-				alert("Bạn không có quyền truy cập quản lý tài khoản.");
-				tab = 'dashboard';
+				const isMobileAccountTab = window.innerWidth <= 768;
+				if (!isMobileAccountTab) {
+					alert("Bạn không có quyền truy cập quản lý tài khoản.");
+					tab = 'dashboard';
+				}
 			}
 
 			if (tab === 'logs' && !isAdmin()) {
@@ -3567,6 +4272,10 @@
 			toggleHidden('view-catalog', tab !== 'catalog');
 			toggleHidden('view-users', tab !== 'users');
 			toggleHidden('view-logs', tab !== 'logs');
+
+			if (tab === 'users' && window.innerWidth <= 768 && !isAdmin()) {
+				setTimeout(() => switchAccountSubTab('personal'), 0);
+			}
 
 			// tabs active
 			toggleClass('tab-dashboard', 'tab-active', tab === 'dashboard');
@@ -3600,6 +4309,12 @@
 				el.classList.toggle('bg-blue-50', active);
 				el.classList.toggle('text-slate-500', !active);
 			});
+
+            ['dashboard', 'history', 'catalog', 'users', 'logs'].forEach(name => {
+                const el = document.getElementById(`side-tab-${name}`);
+                if (!el) return;
+                el.classList.toggle('active', tab === name);
+            });
 		};
 
         window.toggleModal = (id, show) => {
@@ -4351,6 +5066,162 @@
 			`).join('');
 		}
 
+
+
+        function getPasswordFormElements(prefix) {
+            return {
+                currentPassEl: document.getElementById(prefix + '-current-password'),
+                newPassEl: document.getElementById(prefix + '-new-password'),
+                confirmPassEl: document.getElementById(prefix + '-confirm-password'),
+                submitBtn: document.getElementById(prefix + '-password-submit'),
+                messageEl: document.getElementById(prefix + '-password-message')
+            };
+        }
+
+        function setPasswordMessage(prefix, message, type = 'info') {
+            const el = document.getElementById(prefix + '-password-message');
+            if (!el) return;
+
+            el.innerText = message || '';
+            el.classList.toggle('hidden', !message);
+            el.classList.remove('text-red-600', 'text-green-600', 'text-slate-500');
+
+            if (type === 'success') el.classList.add('text-green-600');
+            else if (type === 'error') el.classList.add('text-red-600');
+            else el.classList.add('text-slate-500');
+        }
+
+        function setPersonalPasswordMessage(message, type = 'info') {
+            setPasswordMessage('popup', message, type);
+        }
+
+        function openPasswordPopup() {
+            const modal = document.getElementById('modal-password-change');
+            if (!modal) return;
+
+            setPasswordMessage('popup', '');
+            ['popup-current-password', 'popup-new-password', 'popup-confirm-password'].forEach(id => {
+                const input = document.getElementById(id);
+                if (input) input.value = '';
+            });
+
+            modal.classList.remove('hidden');
+            document.body.classList.add('modal-open');
+            setTimeout(() => document.getElementById('popup-current-password')?.focus(), 80);
+        }
+
+        function closePasswordPopup() {
+            const modal = document.getElementById('modal-password-change');
+            if (!modal) return;
+
+            modal.classList.add('hidden');
+            document.body.classList.remove('modal-open');
+            setPasswordMessage('popup', '');
+
+            ['popup-current-password', 'popup-new-password', 'popup-confirm-password'].forEach(id => {
+                const input = document.getElementById(id);
+                if (input) input.value = '';
+            });
+        }
+
+        async function changePersonalPassword(event) {
+            event.preventDefault();
+
+            const prefix = 'popup';
+            const { currentPassEl, newPassEl, confirmPassEl, submitBtn } = getPasswordFormElements(prefix);
+
+            const currentPassword = currentPassEl?.value.trim() || '';
+            const newPassword = newPassEl?.value.trim() || '';
+            const confirmPassword = confirmPassEl?.value.trim() || '';
+
+            setPasswordMessage(prefix, '');
+
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                setPasswordMessage(prefix, 'Vui lòng nhập đầy đủ mật khẩu hiện tại, mật khẩu mới và xác nhận mật khẩu.', 'error');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                setPasswordMessage(prefix, 'Mật khẩu mới nên có ít nhất 6 ký tự.', 'error');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                setPasswordMessage(prefix, 'Mật khẩu mới và nhập lại mật khẩu không khớp.', 'error');
+                return;
+            }
+
+            if (currentPassword === newPassword) {
+                setPasswordMessage(prefix, 'Mật khẩu mới phải khác mật khẩu hiện tại.', 'error');
+                return;
+            }
+
+            const oldBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+            }
+
+            try {
+                const mode = localStorage.getItem('loginMode');
+
+                if (mode === 'auth') {
+                    const email = currentUser?.email;
+
+                    if (!email) {
+                        throw new Error('Không tìm thấy email tài khoản quản trị.');
+                    }
+
+                    const { error: verifyError } = await supabaseClient.auth.signInWithPassword({
+                        email,
+                        password: currentPassword
+                    });
+
+                    if (verifyError) {
+                        throw new Error('Mật khẩu hiện tại không đúng.');
+                    }
+
+                    const { error: updateError } = await supabaseClient.auth.updateUser({
+                        password: newPassword
+                    });
+
+                    if (updateError) throw updateError;
+                } else {
+                    const username = currentUser?.username;
+
+                    if (!username) {
+                        throw new Error('Không tìm thấy tài khoản người dùng.');
+                    }
+
+                    const { error } = await supabaseClient.rpc('change_app_user_password', {
+                        p_username: username,
+                        p_current_password: currentPassword,
+                        p_new_password: newPassword
+                    });
+
+                    if (error) {
+                        if ((error.message || '').toLowerCase().includes('function') || (error.message || '').toLowerCase().includes('schema cache')) {
+                            throw new Error('Chưa có hàm Supabase change_app_user_password. Cần tạo RPC đổi mật khẩu cho bảng app_users.');
+                        }
+                        throw error;
+                    }
+                }
+
+                await createActivityLog('update', 'account', currentUser?.id || currentUser?.username || null, `${currentDisplayName || 'Người dùng'} đổi mật khẩu cá nhân`, { mode });
+
+                setPasswordMessage(prefix, 'Đổi mật khẩu thành công.', 'success');
+                setTimeout(() => closePasswordPopup(), 900);
+            } catch (error) {
+                setPasswordMessage(prefix, error.message || 'Không đổi được mật khẩu. Vui lòng thử lại.', 'error');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = oldBtnHtml;
+                }
+            }
+        }
+
+
 		document.getElementById('user-form').onsubmit = async (e) => {
 
 			e.preventDefault();
@@ -4383,6 +5254,7 @@
 
         enhanceExcelFilters();
         init();
+		document.body.classList.add('active-tab-dashboard');
 		checkLogin();
     
 
@@ -4407,6 +5279,74 @@
         window.addEventListener('scroll', updateScrollTopButton, { passive: true });
         window.addEventListener('load', updateScrollTopButton);
 
-    </script>
+    
+        
+        function updateBodyRoleClass() {
+            document.body.classList.remove('role-admin', 'role-po', 'role-staff', 'role-user');
+            const role = currentRole || 'staff';
+            document.body.classList.add('role-' + role);
+        }
+
+
+        function switchAccountSubTab(tab) {
+            if (currentRole !== 'admin' && tab === 'manage') tab = 'personal';
+            const manageBtn = document.getElementById('account-subtab-manage');
+            const personalBtn = document.getElementById('account-subtab-personal');
+            const manageView = document.getElementById('users-management-subview');
+            const personalView = document.getElementById('account-personal-subview');
+
+            if (!manageBtn || !personalBtn || !manageView || !personalView) return;
+
+            const isPersonal = tab === 'personal';
+
+            manageBtn.classList.toggle('active', !isPersonal);
+            personalBtn.classList.toggle('active', isPersonal);
+
+            manageView.classList.toggle('hidden', isPersonal);
+            personalView.classList.toggle('hidden', !isPersonal);
+
+            if (isPersonal) {
+                updateMobilePersonalAccount();
+            }
+        }
+
+        function updateMobilePersonalAccount() {
+            const nameEl = document.getElementById('mobile-personal-name');
+            const roleEl = document.getElementById('mobile-personal-role');
+            const usernameEl = document.getElementById('mobile-personal-username');
+            setPersonalPasswordMessage('');
+
+            const displayName = currentDisplayName || currentUser?.full_name || currentUser?.username || 'Người dùng';
+            const username = currentUser?.email || currentUser?.username || currentDisplayName || '-';
+
+            if (nameEl) nameEl.innerText = displayName;
+            if (usernameEl) usernameEl.innerText = username;
+
+            if (roleEl) {
+                const roleMap = {
+                    admin: 'Quản trị viên',
+                    po: 'PO',
+                    staff: 'Nhân viên'
+                };
+                roleEl.innerText = roleMap[currentRole] || currentRole || 'Nhân viên';
+            }
+            updateBodyRoleClass();
+
+            if (currentRole !== 'admin') {
+                const manageBtn = document.getElementById('account-subtab-manage');
+                const personalBtn = document.getElementById('account-subtab-personal');
+                const manageView = document.getElementById('users-management-subview');
+                const personalView = document.getElementById('account-personal-subview');
+
+                if (manageBtn) manageBtn.classList.remove('active');
+                if (personalBtn) personalBtn.classList.add('active');
+                if (manageView) manageView.classList.add('hidden');
+                if (personalView) personalView.classList.remove('hidden');
+            }
+
+        }
+
+
+		</script>
 </body>
 </html>
