@@ -367,7 +367,7 @@
             help = document.createElement('div');
             help.id = 'defect-image-help';
             help.className = 'text-xs text-slate-500';
-            help.textContent = `Có thể chọn tối đa ${MAX_DEFECT_IMAGES} ảnh. Ảnh sẽ được nén trước khi upload.`;
+            help.textContent = `Có thể chọn tối đa ${MAX_DEFECT_IMAGES} ảnh.`;
             input.insertAdjacentElement('afterend', help);
         }
 
