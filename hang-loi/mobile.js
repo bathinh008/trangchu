@@ -362,6 +362,28 @@
         input.required = false;
         oldPreview?.remove();
 
+        // Không dùng giao diện file mặc định vì sau khi copy ảnh vào preview,
+        // code cần xóa input.value để lần sau chọn lại cùng ảnh vẫn kích hoạt change.
+        // Nếu vẫn để input hiện ra, trình duyệt sẽ báo "No file chosen" dù app đã nhận ảnh.
+        input.classList.add('defect-file-real-input');
+
+        let pickerUi = document.getElementById('defect-image-picker-ui');
+        if (!pickerUi) {
+            pickerUi = document.createElement('div');
+            pickerUi.id = 'defect-image-picker-ui';
+            pickerUi.className = 'defect-file-picker-ui';
+            pickerUi.innerHTML = `
+                <label for="f-image" class="defect-file-choose-btn">
+                    <i class="fas fa-images"></i>
+                    <span>Chọn ảnh</span>
+                </label>
+                <span id="defect-image-file-status" class="defect-file-status">Chưa chọn ảnh</span>
+            `;
+            input.insertAdjacentElement('beforebegin', pickerUi);
+        }
+
+        const fileStatus = document.getElementById('defect-image-file-status');
+
         let help = document.getElementById('defect-image-help');
         if (!help) {
             help = document.createElement('div');
@@ -379,8 +401,18 @@
             help.insertAdjacentElement('afterend', grid);
         }
 
+        function updateFileStatus() {
+            if (!fileStatus) return;
+            const count = selectedDefectImages.length;
+            fileStatus.textContent = count > 0
+                ? `Đã chọn ${count}/${MAX_DEFECT_IMAGES} ảnh`
+                : 'Chưa chọn ảnh';
+            fileStatus.classList.toggle('has-files', count > 0);
+        }
+
         function renderPreviewGrid() {
             grid.classList.toggle('hidden', selectedDefectImages.length === 0);
+            updateFileStatus();
             grid.innerHTML = selectedDefectImages.map((item, index) => `
                 <div class="defect-preview-item">
                     <img src="${item.previewUrl}" alt="Ảnh lỗi ${index + 1}">
@@ -402,7 +434,10 @@
 
         input.addEventListener('change', async e => {
             const files = Array.from(e.target.files || []).filter(file => file.type.startsWith('image/'));
-            if (!files.length) return;
+            if (!files.length) {
+                updateFileStatus();
+                return;
+            }
 
             const room = MAX_DEFECT_IMAGES - selectedDefectImages.length;
             const accepted = files.slice(0, Math.max(0, room));
@@ -438,6 +473,8 @@
             input.value = '';
             renderPreviewGrid();
         };
+
+        renderPreviewGrid();
     }
 
     async function uploadDefectImages(imageItems) {
@@ -475,11 +512,9 @@
             .single();
 
         if (result.error && insertPayload.image_urls && /image_urls|column|schema/i.test(result.error.message || '')) {
-            // Tương thích database cũ: nếu chưa thêm cột image_urls thì lưu ảnh đầu tiên như bản cũ.
-            const extraPaths = uploadedImages.slice(1).map(img => img.path).filter(Boolean);
-            if (extraPaths.length) {
-                try { await supabaseClient.storage.from('defect-images').remove(extraPaths); } catch (e) { console.warn(e); }
-            }
+            // Tương thích database cũ: nếu chưa thêm cột image_urls thì lưu toàn bộ ảnh vào cột image_url dạng JSON.
+            // app.js đã được cập nhật để đọc được cả image_url dạng URL đơn và dạng JSON array.
+            insertPayload.image_url = JSON.stringify(imageUrls);
             delete insertPayload.image_urls;
             result = await supabaseClient
                 .from('defects')

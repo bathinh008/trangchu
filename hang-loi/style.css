@@ -1140,6 +1140,62 @@
     display: none !important;
 }
 
+
+
+/* Bộ chọn ảnh custom: tránh hiện chữ trình duyệt "No file chosen" sai khi app đã nhận ảnh preview */
+.defect-file-real-input {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.defect-file-picker-ui {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.defect-file-choose-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 9px 16px;
+    border-radius: 999px;
+    color: #1d4ed8;
+    background: #dbeafe;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    user-select: none;
+    transition: transform .15s ease, background .15s ease, box-shadow .15s ease;
+}
+
+.defect-file-choose-btn:hover {
+    background: #bfdbfe;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px rgba(37, 99, 235, .12);
+}
+
+.defect-file-status {
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 650;
+}
+
+.defect-file-status.has-files {
+    color: #15803d;
+}
+
 .defect-preview-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1460,5 +1516,329 @@
 @media (max-width: 768px) {
     .filter-reset-btn {
         display: none !important;
+    }
+}
+
+/* Hiển thị nhiều ảnh hàng lỗi trong bảng PC và card mobile */
+.defect-image-grid {
+    display: grid;
+    gap: 4px;
+    flex: 0 0 auto;
+    align-content: start;
+}
+
+.defect-image-grid-desktop {
+    grid-template-columns: repeat(2, 44px);
+    width: 92px;
+}
+
+.defect-image-grid-mobile {
+    grid-template-columns: repeat(2, 42px);
+    width: 88px;
+}
+
+.defect-image-thumb {
+    width: 44px;
+    height: 44px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #f8fafc;
+    padding: 0;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+
+.defect-image-grid-mobile .defect-image-thumb {
+    width: 42px;
+    height: 42px;
+}
+
+.defect-image-thumb:hover {
+    transform: translateY(-1px);
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.18);
+}
+
+.defect-image-thumb img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+
+.defect-image-count {
+    grid-column: 1 / -1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 20px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .defect-image-grid-mobile {
+        grid-template-columns: repeat(2, 46px);
+        width: 96px;
+        gap: 5px;
+    }
+
+    .defect-image-grid-mobile .defect-image-thumb {
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+    }
+}
+
+/* Gallery ảnh báo lỗi mới: danh sách chỉ hiển thị 1 ảnh đại diện, bấm vào review ảnh lớn + thumbnail bên dưới */
+.defect-image-review {
+    position: relative;
+    display: block;
+    flex: 0 0 auto;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    padding: 0;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+
+.defect-image-review:hover {
+    transform: translateY(-1px);
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+}
+
+.defect-image-review-desktop {
+    width: 172px;
+    height: 172px;
+    border-radius: 16px;
+}
+
+.defect-image-review-mobile {
+    width: 84px;
+    height: 84px;
+    border-radius: 18px;
+}
+
+.defect-image-review img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+
+.defect-image-review-count {
+    position: absolute;
+    right: 5px;
+    bottom: 5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, .82);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    backdrop-filter: blur(4px);
+}
+
+.defect-image-review-count.single {
+    width: 24px;
+    height: 24px;
+    justify-content: center;
+    padding: 0;
+}
+
+.image-gallery-modal {
+    max-height: 96vh;
+}
+
+.image-gallery-close {
+    position: absolute;
+    top: -48px;
+    right: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .14);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    transition: background .15s ease, color .15s ease, transform .15s ease;
+}
+
+.image-gallery-close:hover {
+    background: rgba(239, 68, 68, .22);
+    color: #fecaca;
+    transform: scale(1.04);
+}
+
+.image-gallery-stage {
+    position: relative;
+    width: 100%;
+    min-height: 280px;
+    max-height: calc(96vh - 190px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.image-gallery-main-image {
+    max-width: 100%;
+    max-height: calc(96vh - 210px);
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 16px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .45);
+    background: rgba(255,255,255,.06);
+}
+
+.image-gallery-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    width: 46px;
+    height: 46px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .18);
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, .25);
+    backdrop-filter: blur(8px);
+    transition: background .15s ease, transform .15s ease;
+}
+
+.image-gallery-nav:hover {
+    background: rgba(59, 130, 246, .72);
+    transform: translateY(-50%) scale(1.06);
+}
+
+.image-gallery-prev { left: 10px; }
+.image-gallery-next { right: 10px; }
+
+.image-gallery-counter {
+    position: absolute;
+    left: 50%;
+    bottom: 12px;
+    transform: translateX(-50%);
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, .78);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    backdrop-filter: blur(8px);
+}
+
+.image-gallery-thumbs {
+    width: 100%;
+    max-width: 760px;
+    margin-top: 14px;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
+    overflow-x: auto;
+    padding: 6px 4px 8px;
+    scrollbar-width: thin;
+}
+
+.image-gallery-thumb {
+    flex: 0 0 auto;
+    width: 62px;
+    height: 62px;
+    border-radius: 14px;
+    overflow: hidden;
+    padding: 0;
+    border: 2px solid rgba(255,255,255,.24);
+    background: rgba(255,255,255,.10);
+    opacity: .62;
+    transition: opacity .15s ease, transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+
+.image-gallery-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.image-gallery-thumb:hover,
+.image-gallery-thumb.active {
+    opacity: 1;
+    transform: translateY(-2px);
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, .22);
+}
+
+@media (max-width: 768px) {
+    .image-gallery-modal {
+        max-height: 100vh;
+    }
+
+    .image-gallery-close {
+        top: 8px;
+        right: 8px;
+        z-index: 5;
+        background: rgba(15, 23, 42, .56);
+    }
+
+    .image-gallery-stage {
+        min-height: 230px;
+        max-height: calc(100vh - 180px);
+    }
+
+    .image-gallery-main-image {
+        max-height: calc(100vh - 205px);
+        border-radius: 14px;
+    }
+
+    .image-gallery-nav {
+        width: 40px;
+        height: 40px;
+        font-size: 15px;
+    }
+
+    .image-gallery-prev { left: 4px; }
+    .image-gallery-next { right: 4px; }
+
+    .image-gallery-thumbs {
+        justify-content: flex-start;
+        max-width: 100%;
+        gap: 7px;
+        padding-left: 6px;
+        padding-right: 6px;
+    }
+
+    .image-gallery-thumb {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+    }
+
+    .defect-image-review-mobile {
+        width: 88px;
+        height: 88px;
     }
 }

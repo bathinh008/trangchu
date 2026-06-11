@@ -803,15 +803,28 @@
         </div>
     </div>
 
-	<div id="modal-image" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4" onclick="toggleImageModal(false)">
-		<div class="relative max-w-4xl w-full flex flex-col items-center">
-			<button class="absolute -top-12 right-0 text-white text-2xl hover:text-red-500 transition-colors">
+	<div id="modal-image" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-3 md:p-4" onclick="toggleImageModal(false)">
+		<div class="image-gallery-modal relative w-full max-w-5xl flex flex-col items-center" onclick="event.stopPropagation()">
+			<button type="button" onclick="toggleImageModal(false)" class="image-gallery-close" aria-label="Đóng xem ảnh">
 				<i class="fas fa-times"></i>
 			</button>
-			<img id="full-res-image" src="" class="max-h-[80vh] w-auto rounded-lg shadow-2xl">
-			<div class="mt-6 flex gap-4">
-				<a id="download-link" href="" download="hinh-anh-loi.jpg" 
-				   class="bg-white text-slate-900 px-6 py-2 rounded-full font-bold flex items-center gap-2 hover:bg-blue-50 transition-colors"
+
+			<div class="image-gallery-stage">
+				<button id="image-gallery-prev" type="button" class="image-gallery-nav image-gallery-prev" onclick="prevDefectImage()" aria-label="Ảnh trước">
+					<i class="fas fa-chevron-left"></i>
+				</button>
+				<img id="full-res-image" src="" class="image-gallery-main-image" alt="Ảnh lỗi">
+				<button id="image-gallery-next" type="button" class="image-gallery-nav image-gallery-next" onclick="nextDefectImage()" aria-label="Ảnh sau">
+					<i class="fas fa-chevron-right"></i>
+				</button>
+				<div id="image-gallery-counter" class="image-gallery-counter">1/1</div>
+			</div>
+
+			<div id="image-gallery-thumbs" class="image-gallery-thumbs"></div>
+
+			<div class="mt-4 flex gap-3">
+				<a id="download-link" href="" download="hinh-anh-loi.jpg"
+				   class="bg-white text-slate-900 px-5 py-2 rounded-full font-bold flex items-center gap-2 hover:bg-blue-50 transition-colors"
 				   onclick="event.stopPropagation()">
 					<i class="fas fa-download text-blue-600"></i> Tải ảnh về máy
 				</a>

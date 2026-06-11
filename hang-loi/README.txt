@@ -33,3 +33,10 @@ ALTER TABLE defects ADD COLUMN IF NOT EXISTS image_urls jsonb DEFAULT '[]'::json
 Cập nhật thêm:
 - Xóa preview ảnh cũ dạng ảnh lớn trong modal Báo cáo lỗi.
 - Chỉ dùng lưới preview ảnh mới, có nút X xóa từng ảnh.
+
+Cập nhật gallery ảnh báo lỗi:
+- Danh sách Báo lỗi chỉ hiển thị 1 ảnh đại diện kèm số lượng ảnh.
+- Bấm ảnh để mở review ảnh lớn.
+- Trong review có nút chuyển ảnh trước/sau, ảnh chạy vòng từ ảnh 1 đến ảnh cuối.
+- Toàn bộ ảnh nhỏ hiển thị bên dưới, bấm ảnh nhỏ để đổi ảnh lớn.
+- Layout tối ưu lại cho PC và mobile.

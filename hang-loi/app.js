@@ -286,18 +286,16 @@ let defectsData = [];
 			if (!(await showConfirm("Thao tác này không thể hoàn tác. Xác nhận lần cuối?", { title: "Xác nhận lần cuối", confirmText: "Xóa tất cả" }))) return;
 
 			try {
-				const defectsWithImages = defectsData.filter(d => d.image_url);
+				const imagePaths = [...new Set(
+					defectsData
+						.flatMap(d => getDefectImageUrls(d).map(getDefectStoragePath))
+						.filter(Boolean)
+				)];
 
-				if (defectsWithImages.length > 0) {
-					const filePaths = defectsWithImages.map(d => {
-						const urlParts = d.image_url.split('/');
-						const fileName = urlParts[urlParts.length - 1];
-						return `defects/${fileName}`;
-					});
-
+				if (imagePaths.length > 0) {
 					await supabaseClient.storage
 						.from('defect-images')
-						.remove(filePaths);
+						.remove(imagePaths);
 				}
 
 				const { error } = await supabaseClient
@@ -1722,6 +1720,96 @@ let defectsData = [];
             }
         }
 
+
+        function parseDefectImageUrls(value) {
+            if (!value) return [];
+
+            if (Array.isArray(value)) return value;
+
+            if (typeof value === 'string') {
+                const raw = value.trim();
+                if (!raw) return [];
+
+                try {
+                    const parsed = JSON.parse(raw);
+                    if (Array.isArray(parsed)) return parsed;
+                    if (parsed && typeof parsed === 'object') return Object.values(parsed);
+                } catch (e) {}
+
+                return raw
+                    .split(/[\n,]+/)
+                    .map(item => item.trim())
+                    .filter(Boolean);
+            }
+
+            if (typeof value === 'object') return Object.values(value);
+            return [];
+        }
+
+        function getDefectImageUrls(defect) {
+            const urls = [];
+            const addUrl = url => {
+                if (!url) return;
+                const clean = String(url).trim();
+                if (!clean || urls.includes(clean)) return;
+                urls.push(clean);
+            };
+
+            parseDefectImageUrls(defect?.image_url).forEach(addUrl);
+            parseDefectImageUrls(defect?.image_urls).forEach(addUrl);
+            parseDefectImageUrls(defect?.images).forEach(img => addUrl(img?.url || img));
+            return urls;
+        }
+
+        function escapeJsString(value) {
+            return String(value || '')
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'")
+                .replace(/\r/g, '')
+                .replace(/\n/g, '');
+        }
+
+        function escapeHtmlAttr(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function encodeImageUrlsAttr(urls) {
+            return escapeHtmlAttr(JSON.stringify(urls || []));
+        }
+
+        function renderDefectImages(defect, mode = 'desktop') {
+            const urls = getDefectImageUrls(defect);
+            const isMobile = mode.includes('mobile');
+            const emptySize = isMobile ? 'w-20 h-20' : 'w-12 h-12';
+            const emptyIcon = isMobile ? 'text-2xl' : '';
+
+            if (!urls.length) {
+                return `<div class="${emptySize} rounded-xl bg-slate-100 flex items-center justify-center text-slate-300 shrink-0">
+                    <i class="fas fa-image ${emptyIcon}"></i>
+                </div>`;
+            }
+
+            const imagesJson = encodeImageUrlsAttr(urls);
+            const previewClass = isMobile ? 'defect-image-review defect-image-review-mobile' : 'defect-image-review defect-image-review-desktop';
+            const countBadge = urls.length > 1
+                ? `<span class="defect-image-review-count"><i class="fas fa-images"></i> 1/${urls.length}</span>`
+                : `<span class="defect-image-review-count single"><i class="fas fa-search-plus"></i></span>`;
+
+            return `<button type="button"
+                class="${previewClass}"
+                data-images="${imagesJson}"
+                onclick="event.stopPropagation(); openDefectImageGallery(JSON.parse(this.dataset.images || '[]'), 0)"
+                title="Bấm để review ${urls.length} ảnh">
+                <img src="${escapeHtmlAttr(urls[0])}" alt="Ảnh lỗi 1/${urls.length}" loading="lazy">
+                ${countBadge}
+            </button>`;
+        }
+
         function renderDashboard() {
 			const listContainer = document.getElementById('defect-list');
 			listContainer.classList.add('opacity-50');
@@ -1738,14 +1826,7 @@ let defectsData = [];
 					</td>
 					<td class="px-6 py-4">
 						<div class="flex items-center gap-3">
-							${d.image_url ? 
-								`<img src="${d.image_url}" 
-									  onclick="event.stopPropagation(); viewImage('${d.image_url}')" 
-									  class="w-12 h-12 rounded-lg shadow-sm object-cover cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all">` : 
-								`<div class="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center text-slate-300">
-									<i class="fas fa-image"></i>
-								 </div>`
-							}
+							${renderDefectImages(d, 'desktop')}
 							<div>
 								<div class="font-semibold text-slate-800">${d.product_name || 'N/A'}</div>
 								<div class="flex flex-col gap-1 mt-1">
@@ -1784,14 +1865,7 @@ let defectsData = [];
 					 class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm active:scale-[0.99] transition cursor-pointer">
 
 					<div class="flex gap-3">
-						${d.image_url ? 
-							`<img src="${d.image_url}" 
-								onclick="event.stopPropagation(); viewImage('${d.image_url}')" 
-								class="w-20 h-20 rounded-xl object-cover border">` :
-							`<div class="w-20 h-20 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300">
-								<i class="fas fa-image text-2xl"></i>
-							</div>`
-						}
+						${renderDefectImages(d, 'mobile')}
 
 						<div class="flex-1 min-w-0">
 							<div class="font-bold text-slate-800 text-base leading-snug">
@@ -1864,14 +1938,7 @@ let defectsData = [];
 
 					<td class="px-6 py-4">
 						<div class="flex items-center gap-3">
-							${d.image_url ? 
-								`<img src="${d.image_url}" 
-									onclick="viewImage('${d.image_url}')" 
-									class="w-12 h-12 rounded-lg shadow-sm object-cover cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all">` : 
-								`<div class="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center text-slate-300">
-									<i class="fas fa-image"></i>
-								</div>`
-							}
+							${renderDefectImages(d, 'desktop')}
 
 							<div>
 								<div class="font-semibold text-slate-800">${d.product_name || 'N/A'}</div>
@@ -1913,14 +1980,7 @@ let defectsData = [];
 			document.getElementById('history-mobile-list').innerHTML = historyData.map(d => `
 				<div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
 					<div class="flex gap-3">
-						${d.image_url ? 
-							`<img src="${d.image_url}" 
-								onclick="viewImage('${d.image_url}')" 
-								class="w-20 h-20 rounded-xl object-cover border">` :
-							`<div class="w-20 h-20 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300">
-								<i class="fas fa-image text-2xl"></i>
-							</div>`
-						}
+						${renderDefectImages(d, 'mobile')}
 
 						<div class="flex-1 min-w-0">
 							<div class="font-bold text-slate-800 text-base leading-snug">
@@ -2078,6 +2138,24 @@ let defectsData = [];
             }
         }
 
+
+        async function removeDefectImagesFromStorage(defect) {
+            const imagePaths = [...new Set(
+                getDefectImageUrls(defect)
+                    .map(getDefectStoragePath)
+                    .filter(Boolean)
+            )];
+            if (!imagePaths.length) return;
+
+            const { error } = await supabaseClient.storage
+                .from('defect-images')
+                .remove(imagePaths);
+
+            if (error) {
+                console.error('Lỗi xóa nhiều ảnh Storage:', error.message);
+            }
+        }
+
         async function deleteHistoryItem(id) {
             if (!isAdmin()) {
                 window.showToast('Chỉ admin mới được xóa lịch sử.');
@@ -2098,7 +2176,7 @@ let defectsData = [];
             if (!(await showConfirm('Xác nhận xóa mục lịch sử này? Thao tác này sẽ xóa cả hình ảnh đính kèm nếu có.', { title: 'Xóa mục lịch sử', confirmText: 'Xóa' }))) return;
 
             try {
-                await removeDefectImageFromStorage(item.image_url);
+                await removeDefectImagesFromStorage(item);
 
                 const { error } = await supabaseClient
                     .from('defects')
@@ -2142,7 +2220,7 @@ let defectsData = [];
             try {
                 const imagePaths = [...new Set(
                     historyItems
-                        .map(d => getDefectStoragePath(d.image_url))
+                        .flatMap(d => getDefectImageUrls(d).map(getDefectStoragePath))
                         .filter(Boolean)
                 )];
 
@@ -2191,9 +2269,9 @@ let defectsData = [];
 
 					if (fetchError) throw fetchError;
 
-					// Nếu có ảnh, thực hiện xóa trong Storage
-					if (item && item.image_url) {
-						await removeDefectImageFromStorage(item.image_url);
+					// Nếu có ảnh, thực hiện xóa toàn bộ ảnh trong Storage
+					if (item && getDefectImageUrls(item).length) {
+						await removeDefectImagesFromStorage(item);
 					}
 				}
 
@@ -2665,21 +2743,87 @@ let defectsData = [];
             }
         }
 
-		// Hàm mở/đóng modal xem ảnh
-		function viewImage(url) {
-			const modal = document.getElementById('modal-image');
+		// Gallery xem ảnh lỗi: ảnh lớn phía trên, thumbnail toàn bộ ảnh bên dưới.
+		let defectImageGalleryUrls = [];
+		let defectImageGalleryIndex = 0;
+
+		function getSafeGalleryUrls(urls) {
+			return (Array.isArray(urls) ? urls : [urls])
+				.map(url => String(url || '').trim())
+				.filter(Boolean)
+				.filter((url, index, arr) => arr.indexOf(url) === index);
+		}
+
+		function updateDefectImageGallery() {
 			const img = document.getElementById('full-res-image');
 			const downloadLink = document.getElementById('download-link');
-			
-			img.src = url;
-			downloadLink.href = url;
-			
-			// Xử lý tên file khi tải về dựa trên URL hoặc thời gian
-			const fileName = `defect_${new Date().getTime()}.jpg`;
-			downloadLink.setAttribute('download', fileName);
+			const counter = document.getElementById('image-gallery-counter');
+			const thumbs = document.getElementById('image-gallery-thumbs');
+			const prevBtn = document.getElementById('image-gallery-prev');
+			const nextBtn = document.getElementById('image-gallery-next');
+			const total = defectImageGalleryUrls.length;
 
+			if (!img || !downloadLink) return;
 
+			if (!total) {
+				img.src = '';
+				if (counter) counter.innerText = '0/0';
+				if (thumbs) thumbs.innerHTML = '';
+				return;
+			}
+
+			if (defectImageGalleryIndex < 0) defectImageGalleryIndex = total - 1;
+			if (defectImageGalleryIndex >= total) defectImageGalleryIndex = 0;
+
+			const currentUrl = defectImageGalleryUrls[defectImageGalleryIndex];
+			img.src = currentUrl;
+			img.alt = `Ảnh lỗi ${defectImageGalleryIndex + 1}/${total}`;
+			downloadLink.href = currentUrl;
+			downloadLink.setAttribute('download', `defect_${defectImageGalleryIndex + 1}_${Date.now()}.jpg`);
+
+			if (counter) counter.innerText = `${defectImageGalleryIndex + 1}/${total}`;
+			if (prevBtn) prevBtn.classList.toggle('hidden', total <= 1);
+			if (nextBtn) nextBtn.classList.toggle('hidden', total <= 1);
+
+			if (thumbs) {
+				thumbs.innerHTML = defectImageGalleryUrls.map((url, index) => `
+					<button type="button"
+						class="image-gallery-thumb ${index === defectImageGalleryIndex ? 'active' : ''}"
+						onclick="event.stopPropagation(); setDefectImageGalleryIndex(${index})"
+						title="Xem ảnh ${index + 1}/${total}">
+						<img src="${escapeHtmlAttr(url)}" alt="Ảnh nhỏ ${index + 1}" loading="lazy">
+					</button>
+				`).join('');
+			}
+		}
+
+		function openDefectImageGallery(urls, startIndex = 0) {
+			defectImageGalleryUrls = getSafeGalleryUrls(urls);
+			defectImageGalleryIndex = Math.max(0, Math.min(Number(startIndex) || 0, defectImageGalleryUrls.length - 1));
+			updateDefectImageGallery();
 			toggleImageModal(true);
+		}
+
+		function setDefectImageGalleryIndex(index) {
+			defectImageGalleryIndex = Number(index) || 0;
+			updateDefectImageGallery();
+		}
+
+		function prevDefectImage() {
+			if (!defectImageGalleryUrls.length) return;
+			defectImageGalleryIndex = (defectImageGalleryIndex - 1 + defectImageGalleryUrls.length) % defectImageGalleryUrls.length;
+			updateDefectImageGallery();
+		}
+
+		function nextDefectImage() {
+			if (!defectImageGalleryUrls.length) return;
+			defectImageGalleryIndex = (defectImageGalleryIndex + 1) % defectImageGalleryUrls.length;
+			updateDefectImageGallery();
+		}
+
+		// Giữ hàm cũ để các chỗ onclick cũ không bị lỗi.
+		function viewImage(url) {
+			openDefectImageGallery([url], 0);
 		}
 
 		function toggleImageModal(show) {
@@ -2692,7 +2836,8 @@ let defectsData = [];
 			} else {
 				modal.classList.add('hidden');
 				document.body.classList.remove('image-modal-open');
-				document.getElementById('full-res-image').src = ''; // Clear src để tránh giật hình khi mở lại
+				const img = document.getElementById('full-res-image');
+				if (img) img.src = '';
 			}
 		}
 
@@ -3102,7 +3247,7 @@ let defectsData = [];
 				"Loại lỗi": d.defect_type || '',
 				"Mức độ": d.severity || '',
 				"Trạng thái": d.status === 'Pending' ? 'Chờ xử lý' : (d.status === 'Fixing' ? 'Đang sửa' : 'Xong'),
-				"Link hình ảnh": d.image_url || ''
+				"Link hình ảnh": getDefectImageUrls(d).join("\n")
 			}));
 
 			// 2. Tạo Workbook và Worksheet
@@ -3142,7 +3287,7 @@ let defectsData = [];
 				"Loại lỗi": d.defect_type || '',
 				"Mức độ": d.severity || '',
 				"Trạng thái": "Xong",
-				"Link hình ảnh": d.image_url || ''
+				"Link hình ảnh": getDefectImageUrls(d).join("\n")
 			}));
 
 			const worksheet = XLSX.utils.json_to_sheet(dataToExport);
