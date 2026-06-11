@@ -1,4 +1,4 @@
-const CACHE_NAME = 'trangchu-noibo-v4-fix-notification-click';
+const CACHE_NAME = 'trangchu-noibo-v9-status-notifications';
 
 // Lấy đúng thư mục gốc của PWA theo scope.
 // Ví dụ:
@@ -33,7 +33,8 @@ const APP_SHELL = [
   'hang-loi/index.html',
   'manifest.json',
   'icons/icon-192.png',
-  'icons/icon-512.png'
+  'icons/icon-512.png',
+  'icons/notification-badge.png'
 ].map(resolveAppUrl);
 
 const BADGE_DB_NAME = 'trangchu-pwa-badge-db';
@@ -172,7 +173,7 @@ self.addEventListener('push', event => {
   const options = {
     body: bodyParts.join('\n') || 'Bấm để mở quản lý hàng lỗi',
     icon: resolveAppUrl('icons/icon-192.png'),
-    badge: resolveAppUrl('icons/icon-192.png'),
+    badge: resolveAppUrl('icons/notification-badge.png'),
     tag: data.defect_id ? `defect-${data.defect_id}` : 'defect-notification',
     renotify: true,
     data: {

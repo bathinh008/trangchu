@@ -12,7 +12,7 @@ webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-retry-count",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -47,6 +47,9 @@ serve(async (req) => {
       sku: payload.sku || "",
       barcode: payload.barcode || "",
       defect_id: payload.defect_id || null,
+      status: payload.status || null,
+      badge_count: payload.badge_count ?? payload.unread_count ?? null,
+      unread_count: payload.unread_count ?? payload.badge_count ?? null,
     });
 
     const results = await Promise.allSettled((subscriptions || []).map(async (sub) => {

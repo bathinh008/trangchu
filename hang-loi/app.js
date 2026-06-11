@@ -623,20 +623,33 @@ let defectsData = [];
         }
 
         async function sendWebPushForNotification(notification) {
-            if (!notification || notification.type !== 'defect_created') return;
+            // Gửi Web Push cho mọi thông báo hàng lỗi, không chỉ thông báo tạo mới.
+            // Trước đây hàm này chặn tất cả type khác defect_created nên đổi trạng thái Đang sửa/Xong
+            // chỉ hiện trong chuông trong app, không đẩy lên thanh trạng thái điện thoại.
+            if (!notification) return;
+
+            const allowedTypes = [
+                'defect_created',
+                'defect_fixing',
+                'defect_resolved',
+                'defect_status_updated'
+            ];
+
+            if (!allowedTypes.includes(notification.type)) return;
 
             try {
                 const { error } = await supabaseClient.functions.invoke('send-push', {
                     body: {
                         notification_id: notification.id,
-                        title: notification.title || 'Có hàng lỗi mới',
-                        body: notification.message || `${notification.product_name || 'Sản phẩm'} vừa được báo lỗi`,
+                        title: notification.title || 'Có cập nhật hàng lỗi',
+                        body: notification.message || `${notification.product_name || 'Sản phẩm'} vừa được cập nhật`,
                         url: 'hang-loi/',
                         type: notification.type,
                         product_name: notification.product_name || '',
                         sku: notification.sku || '',
                         barcode: notification.barcode || '',
-                        defect_id: notification.defect_id || null
+                        defect_id: notification.defect_id || null,
+                        status: notification.status || null
                     }
                 });
 
@@ -687,18 +700,18 @@ let defectsData = [];
                     <div class="flex-1 min-w-0">
                         <div class="flex items-start justify-between gap-2">
                             <div class="font-extrabold text-slate-800 leading-snug">
-                                ${escapeHtml(n.title || 'Có hàng lỗi mới')}
+                                ${escapeHtml(n.title || 'Có cập nhật hàng lỗi')}
                             </div>
                             <button type="button" class="text-slate-400 hover:text-red-500 shrink-0 px-1">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
                         <div class="text-sm text-slate-600 mt-1 leading-relaxed">
-                            ${escapeHtml(n.product_name || 'Sản phẩm mới được báo lỗi')}
+                            ${escapeHtml(n.product_name || 'Sản phẩm được cập nhật')}
                             ${n.sku ? `<span class="font-mono text-blue-600"> - ITEM: ${escapeHtml(n.sku)}</span>` : ''}
                         </div>
                         <div class="text-xs text-slate-400 mt-1">
-                            ${escapeHtml(n.actor_name || n.actor_username || 'Người dùng')} vừa tạo báo cáo lỗi
+                            ${escapeHtml(n.message || ((n.actor_name || n.actor_username || 'Người dùng') + ' vừa cập nhật hàng lỗi'))}
                         </div>
                     </div>
                 </div>
@@ -755,7 +768,7 @@ let defectsData = [];
             setSeenNotificationIds(updatedSeenIds);
 
             newItems
-                .filter(n => n.type === 'defect_created')
+                .filter(n => ['defect_created', 'defect_fixing', 'defect_resolved', 'defect_status_updated'].includes(n.type))
                 .slice(-3)
                 .forEach(n => showNewDefectToast(n));
         }
@@ -1007,7 +1020,9 @@ let defectsData = [];
 
         function notificationIcon(type) {
             if (type === 'defect_created') return 'fa-circle-plus text-blue-600 bg-blue-50';
+            if (type === 'defect_fixing') return 'fa-screwdriver-wrench text-orange-600 bg-orange-50';
             if (type === 'defect_resolved') return 'fa-circle-check text-green-600 bg-green-50';
+            if (type === 'defect_status_updated') return 'fa-arrows-rotate text-indigo-600 bg-indigo-50';
             return 'fa-bell text-slate-600 bg-slate-100';
         }
 
@@ -1121,15 +1136,26 @@ let defectsData = [];
 
             let title = 'Thông báo mới';
             let message = '';
+            const statusText = getStatusText(extra.status || defect.status);
 
             if (type === 'defect_created') {
                 title = 'Có hàng lỗi mới';
                 message = `${actorName} vừa cập nhật hàng lỗi mới: ${defect.product_name || 'N/A'}`;
             }
 
+            if (type === 'defect_fixing') {
+                title = 'Hàng lỗi đang sửa';
+                message = `${actorName} đã cập nhật trạng thái Đang sửa cho: ${defect.product_name || 'N/A'}`;
+            }
+
             if (type === 'defect_resolved') {
-                title = 'Hàng lỗi đã được giải quyết';
-                message = `${actorName} đã cập nhật kết quả Xong cho: ${defect.product_name || 'N/A'}`;
+                title = 'Hàng lỗi đã xong';
+                message = `${actorName} đã cập nhật trạng thái Xong cho: ${defect.product_name || 'N/A'}`;
+            }
+
+            if (type === 'defect_status_updated') {
+                title = 'Cập nhật trạng thái hàng lỗi';
+                message = `${actorName} đã cập nhật trạng thái ${statusText} cho: ${defect.product_name || 'N/A'}`;
             }
 
             try {
@@ -3288,7 +3314,7 @@ let defectsData = [];
 
 		function getStatusText(status) {
 			if (status === 'Pending') return 'Chờ xử lý';
-			if (status === 'Fixing') return 'Đã sửa';
+			if (status === 'Fixing') return 'Đang sửa';
 			if (status === 'Resolved') return 'Xong';
 			return 'Chờ xử lý';
 		}
@@ -3337,10 +3363,17 @@ let defectsData = [];
 
 			await createActivityLog('update', 'defects', id, `Cập nhật trạng thái hàng lỗi: ${updatedDefect?.product_name || currentDefect.product_name || '-'}`, { old_status: currentDefect.status, new_status: status, sku: updatedDefect?.sku || currentDefect.sku, barcode: updatedDefect?.barcode || currentDefect.barcode });
 
-			if (status === 'Resolved' && currentDefect.status !== 'Resolved') {
-				await createNotification('defect_resolved', updatedDefect || currentDefect, { status });
+			if (currentDefect.status !== status) {
+				const notificationType = status === 'Fixing'
+					? 'defect_fixing'
+					: status === 'Resolved'
+						? 'defect_resolved'
+						: 'defect_status_updated';
+
+				await createNotification(notificationType, updatedDefect || currentDefect, { status });
 			}
 
+			window.showToast(`Đã cập nhật trạng thái: ${getStatusText(status)}`, 'success');
 			toggleModal('modal-status', false);
 			await fetchDefects();
 		}
