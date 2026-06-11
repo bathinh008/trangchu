@@ -1392,7 +1392,7 @@ let defectsData = [];
                 filterBtn.type = 'button';
                 filterBtn.className = 'excel-filter-btn';
                 filterBtn.id = `filter-btn-${tableName}-${key}`;
-                filterBtn.title = 'Lọc giống Excel';
+                filterBtn.title = 'Bộ Lọc';
                 filterBtn.innerHTML = '<i class="fas fa-filter text-xs"></i>';
                 filterBtn.onclick = (event) => {
                     event.stopPropagation();
