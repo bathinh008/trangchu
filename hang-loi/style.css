@@ -1455,3 +1455,10 @@
         width: 100%;
     }
 }
+
+/* Ẩn nút Reset lọc trên bản mobile, vẫn giữ hiển thị ở desktop */
+@media (max-width: 768px) {
+    .filter-reset-btn {
+        display: none !important;
+    }
+}
