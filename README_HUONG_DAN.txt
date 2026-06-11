@@ -28,3 +28,10 @@ CAP NHAT POPUP THONG BAO HANG LOI MOI
 - Web con /hang-loi/ da co popup noi khi phat hien notification moi co type = defect_created.
 - Popup chi hien khi nguoi dung dang mo web/PWA.
 - Lan dau dang nhap se khong bung lai thong bao cu; cac thong bao moi sau do se hien popup, rung va am bao nhe neu trinh duyet cho phep.
+
+CAP NHAT PWA BADGE SO THONG BAO
+- Da them so dem thong bao cho icon PWA bang Badging API.
+- Khi mo app, so tren icon PWA se dong bo theo so thong bao chua doc.
+- Khi app dang tat ma co Web Push moi, Service Worker se tang so dem tam thoi.
+- Khi bam "Da doc het", doc tung thong bao, dang xuat hoac loi doc thong bao, badge se duoc cap nhat/xoa lai.
+- Trinh duyet/thiet bi khong ho tro App Badge se tu bo qua, app van chay binh thuong.

@@ -410,6 +410,53 @@ let defectsData = [];
             );
         }
 
+        const PWA_BADGE_MAX_COUNT = 99;
+
+        function normalizePwaBadgeCount(count) {
+            const value = Number(count);
+            if (!Number.isFinite(value) || value <= 0) return 0;
+            return Math.min(Math.floor(value), PWA_BADGE_MAX_COUNT);
+        }
+
+        function syncPwaBadgeToServiceWorker(count) {
+            if (!('serviceWorker' in navigator)) return;
+
+            const badgeCount = normalizePwaBadgeCount(count);
+
+            navigator.serviceWorker.ready
+                .then(registration => {
+                    if (registration?.active) {
+                        registration.active.postMessage({
+                            type: 'PWA_BADGE_SET',
+                            count: badgeCount
+                        });
+                    }
+                })
+                .catch(() => null);
+        }
+
+        async function updatePwaAppBadge(count) {
+            const badgeCount = normalizePwaBadgeCount(count);
+
+            syncPwaBadgeToServiceWorker(badgeCount);
+
+            try {
+                if (!('setAppBadge' in navigator) || !('clearAppBadge' in navigator)) return;
+
+                if (badgeCount > 0) {
+                    await navigator.setAppBadge(badgeCount);
+                } else {
+                    await navigator.clearAppBadge();
+                }
+            } catch (error) {
+                console.warn('Không cập nhật được số đếm PWA:', error?.message || error);
+            }
+        }
+
+        function clearPwaAppBadge() {
+            updatePwaAppBadge(0);
+        }
+
         function isNotificationRead(id) {
             return getReadNotificationIds().includes(String(id));
         }
@@ -532,9 +579,9 @@ let defectsData = [];
 
                 registration.showNotification('Đã bật thông báo', {
                     body: 'Thiết bị này sẽ nhận thông báo khi có hàng lỗi mới.',
-                    icon: '/icons/icon-192.png',
-                    badge: '/icons/icon-192.png',
-                    data: { url: '/hang-loi/' }
+                    icon: new URL('../icons/icon-192.png', window.location.href).href,
+                    badge: new URL('../icons/icon-192.png', window.location.href).href,
+                    data: { url: 'hang-loi/' }
                 });
             } catch (error) {
                 console.warn('Lỗi bật Web Push:', error);
@@ -584,7 +631,7 @@ let defectsData = [];
                         notification_id: notification.id,
                         title: notification.title || 'Có hàng lỗi mới',
                         body: notification.message || `${notification.product_name || 'Sản phẩm'} vừa được báo lỗi`,
-                        url: '/hang-loi/',
+                        url: 'hang-loi/',
                         type: notification.type,
                         product_name: notification.product_name || '',
                         sku: notification.sku || '',
@@ -752,6 +799,7 @@ let defectsData = [];
                 badge.classList.add('hidden');
                 badge.classList.remove('flex');
             }
+            clearPwaAppBadge();
             if (!list) return;
             list.innerHTML = `
                 <div class="p-4 bg-red-50 text-red-700 text-sm leading-relaxed">
@@ -971,6 +1019,7 @@ let defectsData = [];
             if (!list || !badge || !countText) return;
 
             const unreadCount = notificationsData.filter(n => !isNotificationRead(n.id)).length;
+            updatePwaAppBadge(unreadCount);
 
             countText.innerText = `${notificationsData.length} thông báo`;
 
@@ -3160,6 +3209,8 @@ let defectsData = [];
 
 			localStorage.removeItem('loginMode');
 			localStorage.removeItem('appUser');
+
+			clearPwaAppBadge();
 
 			location.reload();
 		}

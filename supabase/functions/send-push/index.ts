@@ -26,7 +26,7 @@ serve(async (req) => {
 
     const title = payload.title || "Có hàng lỗi mới";
     const body = payload.body || payload.message || "Bấm để mở quản lý hàng lỗi";
-    const url = payload.url || "/hang-loi/";
+    const url = payload.url || "hang-loi/";
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
