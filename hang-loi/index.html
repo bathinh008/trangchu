@@ -820,6 +820,19 @@
         }
 
 
+
+
+        /* Mobile: ở các tab không có nút + Báo lỗi, hạ nút lên đầu trang xuống thấp hơn */
+        @media (max-width: 768px) {
+            body:not(.active-tab-dashboard) #scroll-top-btn {
+                bottom: calc(102px + env(safe-area-inset-bottom)) !important;
+            }
+
+            body.active-tab-dashboard #scroll-top-btn {
+                bottom: calc(168px + env(safe-area-inset-bottom)) !important;
+            }
+        }
+
         /* Mobile: ẩn badge kết nối thành công cho gọn header */
         @media (max-width: 768px) {
             #connection-status {
@@ -915,6 +928,21 @@
             #modal-barcode-scanner,
             #modal-password-change {
                 overscroll-behavior: contain;
+            }
+        }
+
+
+        /* Mobile: kéo xuống ẩn header, kéo lên hiện lại */
+        @media (max-width: 768px) {
+            header {
+                transition: transform .22s ease, box-shadow .22s ease;
+                will-change: transform;
+                transform: translateY(0);
+            }
+
+            body.mobile-header-hidden header {
+                transform: translateY(-105%);
+                box-shadow: none;
             }
         }
 
@@ -5733,6 +5761,64 @@
             }, { passive: true });
         })();
 
+
+
+
+        // Mobile: kéo xuống ẩn header, kéo lên hiện lại
+        (function setupMobileHideHeaderOnScroll() {
+            if (window.__mobileHideHeaderOnScrollReady) return;
+            window.__mobileHideHeaderOnScrollReady = true;
+
+            let lastY = window.pageYOffset || document.documentElement.scrollTop || 0;
+            let ticking = false;
+
+            function isMobileViewport() {
+                return window.matchMedia('(max-width: 768px)').matches;
+            }
+
+            function shouldKeepHeaderVisible() {
+                return document.body.classList.contains('modal-open') ||
+                    document.body.classList.contains('image-modal-open') ||
+                    !document.getElementById('login-screen')?.classList.contains('hidden');
+            }
+
+            function updateHeaderByScroll() {
+                ticking = false;
+
+                if (!isMobileViewport() || shouldKeepHeaderVisible()) {
+                    document.body.classList.remove('mobile-header-hidden');
+                    lastY = window.pageYOffset || document.documentElement.scrollTop || 0;
+                    return;
+                }
+
+                const currentY = Math.max(0, window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0);
+                const diff = currentY - lastY;
+
+                // Ở gần đầu trang thì luôn hiện header.
+                if (currentY < 24) {
+                    document.body.classList.remove('mobile-header-hidden');
+                } else if (diff > 4) {
+                    // Cuộn/kéo xuống: ẩn header.
+                    document.body.classList.add('mobile-header-hidden');
+                } else if (diff < -4) {
+                    // Cuộn/kéo lên: hiện header.
+                    document.body.classList.remove('mobile-header-hidden');
+                }
+
+                lastY = currentY;
+            }
+
+            function requestUpdate() {
+                if (ticking) return;
+                ticking = true;
+                requestAnimationFrame(updateHeaderByScroll);
+            }
+
+            window.addEventListener('scroll', requestUpdate, { passive: true });
+            document.addEventListener('touchmove', requestUpdate, { passive: true });
+            window.addEventListener('resize', requestUpdate, { passive: true });
+            document.addEventListener('DOMContentLoaded', requestUpdate);
+        })();
 
 </script>
 </body>
