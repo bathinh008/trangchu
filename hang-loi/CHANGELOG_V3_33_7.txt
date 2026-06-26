@@ -1,0 +1,3 @@
+v3.33.7
+- Sửa lỗi nhãn số ở cột cao nhất của biểu đồ xu hướng bị cắt mất.
+- Cho phép nhãn nằm phía trên cột hiển thị đầy đủ trên PC và mobile.
