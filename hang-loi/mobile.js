@@ -107,11 +107,15 @@
         const role = safeCall(() => currentRole, 'staff') || 'staff';
         const tabs = [];
 
-        // PC và Mobile dùng chung một cấu hình quyền tab.
-        if (role === 'admin') tabs.push('dashboard');
+        // Đồng bộ quyền tab cho cả PC và Mobile.
+        if (role === 'admin' || role === 'manager') tabs.push('dashboard');
         tabs.push('defects', 'history');
-        if (role === 'admin' || role === 'po') tabs.push('catalog');
+        if (role === 'admin' || role === 'manager' || role === 'po') tabs.push('catalog');
+
+        // Mọi vai trò được mở tài khoản cá nhân trên mobile.
         tabs.push('users');
+
+        // Nhật ký chỉ dành cho admin.
         if (role === 'admin') tabs.push('logs');
 
         return tabs;
@@ -250,30 +254,12 @@
     };
 
     function setupHeaderHomeShortcut() {
-        const header = document.querySelector('header');
-        if (!header) return;
-
-        const targets = [
-            header.querySelector('h1'),
-            header.querySelector('.p-2.bg-blue-600.rounded-lg')
-        ].filter(Boolean);
-
-        targets.forEach(el => {
-            el.setAttribute('role', 'button');
-            el.setAttribute('tabindex', '0');
-            el.title = 'Về tab Báo lỗi';
-            const goHome = () => {
-                const homeTab = safeCall(() => window.getDefaultLandingTab?.(), null) || window.getAllowedTabs()[0] || 'defects';
-                if (typeof window.switchTab === 'function') window.switchTab(homeTab, { silent: true });
-                if (typeof window.scrollToTop === 'function') window.scrollToTop();
-            };
-            el.addEventListener('click', goHome);
-            el.addEventListener('keydown', e => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    goHome();
-                }
-            });
+        const headerBrand = document.getElementById('header-brand-home');
+        const sideBrand = document.getElementById('side-menu-brand-home');
+        [headerBrand, sideBrand].forEach(element => {
+            if (!element) return;
+            element.title = 'Về trang chính';
+            element.setAttribute('aria-label', 'Về trang chính');
         });
     }
 

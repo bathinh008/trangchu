@@ -1,0 +1,5 @@
+v3.33.14
+- Cập nhật nút “Quản lý hàng lỗi” cho giao diện mobile.
+- Admin/Quản lý quay về Dashboard.
+- PO/Nhân viên/User quay về Hàng lỗi.
+- Áp dụng cho cả header chính và tiêu đề trong menu bên trái.

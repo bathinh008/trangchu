@@ -13,7 +13,7 @@
     <!-- Barcode Detector polyfill sẽ được nạp động bằng import() khi cần quét -->
     <!-- Supabase JS Client -->
     <script defer src="./vendor/supabase.umd.js?v=3.14.0"></script>
-    <link rel="stylesheet" href="./style.css?v=3.33.7">
+    <link rel="stylesheet" href="./style.css?v=3.33.14">
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen pb-20 md:pb-0">
 
@@ -71,7 +71,7 @@
                 </button>
                 <button id="header-brand-home" type="button" onclick="handleHeaderBrandClick()"
                     class="header-brand-home flex items-center gap-3 min-w-0"
-                    title="Về Dashboard" aria-label="Về Dashboard">
+                    title="Về trang chính" aria-label="Về trang chính">
                     <span class="p-2 bg-blue-600 rounded-lg shrink-0">
                         <i class="fas fa-box text-white text-xl"></i>
                     </span>
@@ -83,7 +83,7 @@
                 </div>
             </div>
             <nav id="top-tab-nav" class="hidden">
-				<button onclick="switchTab('dashboard')" id="tab-dashboard" class="admin-only py-5 px-1 tab-active transition-all">Dashboard</button>
+				<button onclick="switchTab('dashboard')" id="tab-dashboard" class="dashboard-access-only py-5 px-1 tab-active transition-all">Dashboard</button>
 				<button onclick="switchTab('defects')" id="tab-defects" class="py-5 px-1 text-slate-500 hover:text-blue-600 transition-all">Hàng lỗi</button>
 				<button onclick="switchTab('history')" id="tab-history" class="py-5 px-1 text-slate-500 hover:text-blue-600 transition-all">Lịch sử</button>
 				<button onclick="switchTab('catalog')" id="tab-catalog" class="admin-po-only py-5 px-1 text-slate-500 hover:text-blue-600 transition-all">
@@ -106,9 +106,12 @@
 					<button id="user-menu-btn" type="button" onclick="toggleUserMenu()"
 						class="flex items-center gap-2 rounded-xl px-3 py-2 transition-colors"
 						title="Tài khoản">
-						<div class="flex flex-col items-end leading-tight">
+						<div class="flex flex-col items-end leading-tight min-w-0">
 							<span class="hello-label text-xs text-slate-400">Xin chào,</span>
-							<span id="hello-user" class="font-bold text-slate-700">Người dùng</span>
+							<div class="header-user-line">
+								<span id="hello-user" class="font-bold text-slate-700 truncate">Người dùng</span>
+								<span id="hello-role-badge" class="header-role-badge is-staff">Nhân viên</span>
+							</div>
 						</div>
 						<i class="fas fa-chevron-down text-xs text-slate-400"></i>
 					</button>
@@ -116,7 +119,10 @@
 					<div id="user-menu-panel" aria-hidden="true">
 						<div class="px-3 py-2 border-b border-slate-100 mb-1">
 							<div class="text-xs text-slate-400">Đang đăng nhập</div>
-							<div id="user-menu-name" class="font-bold text-slate-700 truncate">Người dùng</div>
+							<div class="user-menu-header-row">
+								<div id="user-menu-name" class="font-bold text-slate-700 truncate">Người dùng</div>
+								<span id="user-menu-role-badge" class="header-role-badge is-staff">Nhân viên</span>
+							</div>
 						</div>
 
 						<button onclick="toggleUserMenu(false); openPasswordPopup()" class="user-menu-action text-blue-600">
@@ -152,14 +158,19 @@
                 title="Đóng menu" aria-label="Đóng menu">
                 <i class="fas fa-bars text-xl"></i>
             </button>
-            <div class="p-2 bg-blue-600 rounded-lg">
-                <i class="fas fa-box text-white text-lg"></i>
-            </div>
-            <div class="font-extrabold text-slate-800 leading-tight">Quản lý hàng lỗi</div>
+            <button id="side-menu-brand-home" type="button"
+                onclick="handleHeaderBrandClick(); toggleSideMenu(false)"
+                class="side-menu-brand-home flex items-center gap-3 min-w-0"
+                title="Về trang chính" aria-label="Về trang chính">
+                <span class="p-2 bg-blue-600 rounded-lg shrink-0">
+                    <i class="fas fa-box text-white text-lg"></i>
+                </span>
+                <span class="font-extrabold text-slate-800 leading-tight truncate">Quản lý hàng lỗi</span>
+            </button>
         </div>
 
         <div class="p-3 space-y-1">
-            <button onclick="switchTab('dashboard'); toggleSideMenu(false);" id="side-tab-dashboard" class="admin-only side-menu-item active">
+            <button onclick="switchTab('dashboard'); toggleSideMenu(false);" id="side-tab-dashboard" class="dashboard-access-only side-menu-item active">
                 <i class="fas fa-chart-pie"></i>
                 <span>Dashboard</span>
             </button>
@@ -194,7 +205,7 @@
 
 
     <!-- Dashboard View -->
-    <main id="view-dashboard" class="admin-only w-[94%] max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main id="view-dashboard" class="dashboard-access-only w-[94%] max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Dashboard Analytics -->
         <section class="dashboard-shell mb-7">
             <div class="dashboard-hero-card">
@@ -416,7 +427,7 @@
 
             <!-- Hàng 2: ô tìm kiếm + lọc trạng thái -->
             <div class="flex flex-col md:flex-row gap-3 md:items-center">
-                <div class="relative w-full md:max-w-xl">
+                <div class="relative w-full md:max-w-xl search-result-host">
                     <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
                     <input 
                         type="text" 
@@ -424,6 +435,7 @@
                         placeholder="Tìm theo sản phẩm, ITEM, tên NCC hoặc mã NCC..."
                         class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     >
+                    <span id="search-result-dashboard" class="search-result-badge hidden" aria-live="polite">0 kết quả</span>
                 </div>
 
                 <select 
@@ -528,12 +540,13 @@
 			</div>
 
 			<!-- Hàng 2: ô tìm kiếm -->
-			<div class="relative w-full md:max-w-xl">
+			<div class="relative w-full md:max-w-xl search-result-host">
 				<i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
 
 				<input id="catalog-search" type="text"
 					placeholder="Tìm barcode, tên sản phẩm, ITEM, tên NCC hoặc mã NCC..."
 					class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                    <span id="search-result-catalog" class="search-result-badge hidden" aria-live="polite">0 kết quả</span>
 			</div>
 		</div>
         <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm desktop-table">
@@ -602,12 +615,13 @@
 			</div>
 
 			<!-- Hàng 2: ô tìm kiếm -->
-			<div class="relative w-full md:max-w-xl">
+			<div class="relative w-full md:max-w-xl search-result-host">
 				<i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
 
 				<input id="history-search" type="text"
 					placeholder="Tìm lịch sử theo sản phẩm, ITEM, barcode, tên NCC hoặc mã NCC..."
 					class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                    <span id="search-result-history" class="search-result-badge hidden" aria-live="polite">0 kết quả</span>
 			</div>
 
 		</div>
@@ -721,12 +735,13 @@
 			</div>
 
 			<!-- CENTER -->
-			<div class="relative w-full md:w-96">
+			<div class="relative w-full md:w-96 search-result-host">
 				<i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
 
 				<input id="users-search" type="text"
 					placeholder="Tìm tài khoản, họ tên, role..."
 					class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                    <span id="search-result-users" class="search-result-badge hidden" aria-live="polite">0 kết quả</span>
 			</div>
 
 			<!-- RIGHT -->
@@ -784,11 +799,12 @@
 				<p class="text-sm text-slate-500 mt-1">Chỉ admin mới xem được tài khoản nào đăng nhập, thêm, sửa, xóa, cập nhật dữ liệu.</p>
 			</div>
 
-			<div class="relative w-full md:w-96">
+			<div class="relative w-full md:w-96 search-result-host">
 				<i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
 				<input id="logs-search" type="text"
 					placeholder="Tìm tài khoản, hành động, nội dung log..."
 					class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                    <span id="search-result-logs" class="search-result-badge hidden" aria-live="polite">0 kết quả</span>
 			</div>
 
 			<select id="logs-action-filter"
@@ -1053,6 +1069,7 @@
 					class="w-full px-3 py-2 border rounded-lg">
 
 					<option value="staff">Nhân viên</option>
+					<option value="manager">Quản lý</option>
 					<option value="po">PO</option>
 				</select>
 
@@ -1090,6 +1107,7 @@
 				<select id="edit-role"
 					class="w-full px-3 py-2 border rounded-lg">
 					<option value="staff">Nhân viên</option>
+					<option value="manager">Quản lý</option>
 					<option value="po">PO</option>
 				</select>
 
@@ -1251,7 +1269,7 @@
 		class="auth-nav-hidden md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(15,23,42,0.08)] px-2 py-2 grid grid-cols-5 gap-1">
 
 		<button onclick="switchTab('dashboard')" id="m-tab-dashboard"
-			class="admin-only flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-blue-600 bg-blue-50 font-semibold text-[11px]">
+			class="dashboard-access-only flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-blue-600 bg-blue-50 font-semibold text-[11px]">
 			<i class="fas fa-chart-pie text-lg"></i>
 			<span>Tổng quan</span>
 		</button>
@@ -1288,8 +1306,8 @@
 
 	</nav>
 
-    <script defer src="./supabase.js?v=3.33.7"></script>
-    <script defer src="./app.js?v=3.33.7"></script>
-    <script defer src="./mobile.js?v=3.33.7"></script>
+    <script defer src="./supabase.js?v=3.33.14"></script>
+    <script defer src="./app.js?v=3.33.14"></script>
+    <script defer src="./mobile.js?v=3.33.14"></script>
 </body>
 </html>

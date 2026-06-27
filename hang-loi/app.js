@@ -1065,7 +1065,25 @@ let defectsData = [];
             });
         }
 
-        function renderActivityLogs() {
+        function getUserRoleLabel(role) {
+    const roleMap = {
+        admin: 'Quản trị viên',
+        manager: 'Quản lý',
+        po: 'PO',
+        staff: 'Nhân viên',
+        user: 'Nhân viên'
+    };
+    return roleMap[role] || role || 'Nhân viên';
+}
+
+function getUserRoleBadgeClass(role) {
+    if (role === 'admin') return 'bg-red-100 text-red-700';
+    if (role === 'manager') return 'bg-violet-100 text-violet-700';
+    if (role === 'po') return 'bg-blue-100 text-blue-700';
+    return 'bg-slate-100 text-slate-700';
+}
+
+function renderActivityLogs() {
             const list = document.getElementById('logs-list');
             const mobileList = document.getElementById('logs-mobile-list');
             if (!list || !mobileList) return;
@@ -1341,14 +1359,22 @@ let defectsData = [];
 			return currentRole === 'po';
 		}
 
+		function isManager() {
+			return currentRole === 'manager';
+		}
+
+		function canAccessDashboard() {
+			return isAdmin() || isManager();
+		}
+
 		function canManageData() {
-			return currentRole === 'admin' || currentRole === 'po';
+			return currentRole === 'admin' || currentRole === 'manager' || currentRole === 'po';
 		}
 
 
         // Nâng cấp quyền tab: dùng một hàm trung tâm cho bottom nav, side menu và vuốt tab.
         function getDefaultLandingTab() {
-            return isAdmin() ? 'dashboard' : 'defects';
+            return canAccessDashboard() ? 'dashboard' : 'defects';
         }
 
         function getAllowedTabs() {
@@ -1356,9 +1382,9 @@ let defectsData = [];
             const tabs = [];
 
             // Đồng bộ PC/Mobile theo quyền tài khoản.
-            if (role === 'admin') tabs.push('dashboard');
+            if (role === 'admin' || role === 'manager') tabs.push('dashboard');
             tabs.push('defects', 'history');
-            if (role === 'admin' || role === 'po') tabs.push('catalog');
+            if (role === 'admin' || role === 'manager' || role === 'po') tabs.push('catalog');
 
             // Tab Tài khoản vẫn có trong danh sách để mobile dùng cho mọi vai trò.
             // Trên PC, applyPermissionUI() sẽ chỉ hiển thị tab này cho admin.
@@ -1370,17 +1396,33 @@ let defectsData = [];
 
         window.getDefaultLandingTab = getDefaultLandingTab;
         window.getAllowedTabs = getAllowedTabs;
+        window.canAccessDashboard = canAccessDashboard;
 
 		function updateHelloUser() {
 
 			const displayName = currentDisplayName || currentUser?.full_name || currentUser?.username || currentUser?.email || 'Người dùng';
 			const username = currentUser?.username || currentUser?.email || displayName;
+			const roleMetaMap = {
+				admin: { text: 'Quản trị viên', cls: 'is-admin' },
+				manager: { text: 'Quản lý', cls: 'is-manager' },
+				po: { text: 'PO', cls: 'is-po' },
+				staff: { text: 'Nhân viên', cls: 'is-staff' },
+				user: { text: 'Nhân viên', cls: 'is-user' }
+			};
+			const roleMeta = roleMetaMap[currentRole] || { text: currentRole || 'Nhân viên', cls: 'is-staff' };
 
 			const el = document.getElementById('hello-user');
 			const menuNameEl = document.getElementById('user-menu-name');
+			const badgeEl = document.getElementById('hello-role-badge');
+			const panelBadgeEl = document.getElementById('user-menu-role-badge');
 
 			if (el) el.innerText = displayName;
 			if (menuNameEl) menuNameEl.innerText = username;
+			[badgeEl, panelBadgeEl].forEach((badge) => {
+				if (!badge) return;
+				badge.innerText = roleMeta.text;
+				badge.className = `header-role-badge ${roleMeta.cls}`;
+			});
 		}
 
 
@@ -2873,8 +2915,11 @@ let defectsData = [];
         });
 
         window.handleHeaderBrandClick = () => {
-            if (!window.matchMedia('(min-width: 769px)').matches) return;
-            window.switchTab('dashboard');
+            const destination = typeof getDefaultLandingTab === 'function'
+                ? getDefaultLandingTab()
+                : ((currentRole === 'admin' || currentRole === 'manager') ? 'dashboard' : 'defects');
+            window.switchTab(destination);
+            if (typeof window.scrollToTop === 'function') window.scrollToTop();
         };
 
         window.switchTab = (tab, options = {}) => {
@@ -2896,7 +2941,7 @@ let defectsData = [];
 				updateBodyRoleClass();
 			}
 
-			if (tab === 'dashboard' && !isAdmin()) {
+			if (tab === 'dashboard' && !canAccessDashboard()) {
 				if (!silent) window.showToast("Chỉ admin mới được xem Dashboard.");
 				tab = getDefaultLandingTab();
 			}
@@ -4079,6 +4124,10 @@ function getStatusText(status) {
 				el.classList.toggle('hidden', !canManageData());
 			});
 
+			document.querySelectorAll('.dashboard-access-only').forEach(el => {
+				el.classList.toggle('hidden', !canAccessDashboard());
+			});
+
 			document.querySelectorAll('.admin-only').forEach(el => {
 				el.classList.toggle('hidden', !isAdmin());
 			});
@@ -4087,8 +4136,8 @@ function getStatusText(status) {
 				document.getElementById('view-catalog')?.classList.add('hidden');
 			}
 
-            // Không để staff/PO nhìn thấy Dashboard dù DOM đã được tải sẵn.
-            if (!isAdmin()) {
+            // Chỉ admin và quản lý được xem Dashboard.
+            if (!canAccessDashboard()) {
                 document.getElementById('view-dashboard')?.classList.add('hidden');
                 if (document.body.classList.contains('active-tab-dashboard')) {
                     window.switchTab?.('defects', { silent: true });
@@ -4164,14 +4213,8 @@ function getStatusText(status) {
 
 					<td class="px-6 py-4">
 
-						<span class="px-2 py-1 rounded-full text-xs font-bold
-							${u.role === 'admin'
-								? 'bg-red-100 text-red-700'
-								: u.role === 'po'
-									? 'bg-blue-100 text-blue-700'
-									: 'bg-slate-100 text-slate-700'}">
-
-							${u.role}
+						<span class="px-2 py-1 rounded-full text-xs font-bold ${getUserRoleBadgeClass(u.role)}">
+							${escapeHtml(getUserRoleLabel(u.role))}
 						</span>
 
 					</td>
@@ -4238,14 +4281,8 @@ function getStatusText(status) {
 							</div>
 						</div>
 
-						<span class="px-2 py-1 rounded-full text-xs font-bold ${
-							u.role === 'admin'
-								? 'bg-red-100 text-red-700'
-								: u.role === 'po'
-									? 'bg-blue-100 text-blue-700'
-									: 'bg-slate-100 text-slate-700'
-						}">
-							${u.role}
+						<span class="px-2 py-1 rounded-full text-xs font-bold ${getUserRoleBadgeClass(u.role)}">
+							${escapeHtml(getUserRoleLabel(u.role))}
 						</span>
 					</div>
 
@@ -4521,7 +4558,7 @@ function getStatusText(status) {
     
         
         function updateBodyRoleClass() {
-            document.body.classList.remove('role-admin', 'role-po', 'role-staff', 'role-user');
+            document.body.classList.remove('role-admin', 'role-manager', 'role-po', 'role-staff', 'role-user');
             const role = currentRole || 'staff';
             document.body.classList.add('role-' + role);
         }
@@ -4582,6 +4619,7 @@ function getStatusText(status) {
             if (roleEl) {
                 const roleMap = {
                     admin: 'Quản trị viên',
+                    manager: 'Quản lý',
                     po: 'PO',
                     staff: 'Nhân viên'
                 };
@@ -4648,7 +4686,7 @@ function getStatusText(status) {
                 const availableTabs = (typeof getAllowedTabs === 'function')
                     ? getAllowedTabs().filter(tab => allMobileTabs.includes(tab))
                     : allMobileTabs.filter(tab => {
-                        if (tab === 'dashboard') return typeof isAdmin === 'function' && isAdmin();
+                        if (tab === 'dashboard') return typeof canAccessDashboard === 'function' && canAccessDashboard();
                         if (tab === 'catalog') return typeof canManageData === 'function' && canManageData();
                         if (tab === 'logs') return typeof isAdmin === 'function' && isAdmin();
                         return true;
@@ -5166,6 +5204,20 @@ function animateDashboardCharts({ pendingPercent = 0, resolvedPercent = 0, compl
     dashboardDonutAnimationFrame = requestAnimationFrame(step);
 }
 
+
+function updateSearchResultText(inputElement, resultElementId, count) {
+    const resultElement = document.getElementById(resultElementId);
+    if (!resultElement) return;
+
+    const hasSearchText = String(inputElement?.value || '').trim() !== '';
+    resultElement.classList.toggle('hidden', !hasSearchText);
+    resultElement.parentElement?.classList.toggle('has-search-result', hasSearchText);
+
+    if (hasSearchText) {
+        resultElement.textContent = `${Number(count || 0).toLocaleString('vi-VN')} kết quả`;
+    }
+}
+
 function renderDashboardAnalytics() {
     restoreDashboardSettings();
     const periodSelect = document.getElementById('dashboard-period');
@@ -5380,6 +5432,7 @@ function renderDashboard() {
     let filtered = getSearchFilteredRows('dashboard');
     filtered = applyTableFilters(filtered, 'dashboard');
     filtered = applyTableSort([...filtered], 'dashboard');
+    updateSearchResultText(searchInput, 'search-result-dashboard', filtered.length);
     updateSortIndicators('dashboard');
     updateFilterIndicators('dashboard');
     setDashboardText('dashboard-visible-count', `${filtered.length.toLocaleString('vi-VN')} mục`);
@@ -5433,6 +5486,7 @@ function renderHistory() {
     let rows = getSearchFilteredRows('history');
     rows = applyTableFilters(rows, 'history');
     rows = applyTableSort([...rows], 'history');
+    updateSearchResultText(historySearch, 'search-result-history', rows.length);
     updateSortIndicators('history');
     updateFilterIndicators('history');
 
@@ -5462,6 +5516,7 @@ function renderCatalog() {
     let rows = getSearchFilteredRows('catalog');
     rows = applyTableFilters(rows, 'catalog');
     rows = applyTableSort([...rows], 'catalog');
+    updateSearchResultText(catalogSearch, 'search-result-catalog', rows.length);
     updateSortIndicators('catalog');
     updateFilterIndicators('catalog');
 
@@ -5482,6 +5537,7 @@ function renderActivityLogs() {
     if (!list || !mobileList) return;
     if (!isAdmin()) { list.innerHTML = ''; mobileList.innerHTML = ''; return; }
     const rows = getFilteredActivityLogs();
+    updateSearchResultText(logsSearch, 'search-result-logs', rows.length);
     if (!rows.length) {
         list.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-400">Chưa có nhật ký hoặc chưa tạo bảng activity_logs</td></tr>';
         mobileList.innerHTML = '<div class="bg-white border border-slate-200 rounded-2xl p-6 text-center text-slate-400 text-sm">Chưa có nhật ký hoặc chưa tạo bảng activity_logs</div>';
@@ -5495,16 +5551,17 @@ function renderUsers() {
     const query = (usersSearch?.value || '').toLowerCase().trim();
     let rows = appUsers.filter(u => `${u.username || ''} ${u.full_name || ''} ${u.role || ''} ${u.active ? 'hoạt động active' : 'đã khóa inactive'}`.toLowerCase().includes(query));
     rows = applyTableSort(rows, 'users');
+    updateSearchResultText(usersSearch, 'search-result-users', rows.length);
     updateSortIndicators('users');
     usersList.innerHTML = rows.map(u => {
         const id = escapeHtmlAttr(u.id);
-        const roleClass = u.role === 'admin' ? 'bg-red-100 text-red-700' : u.role === 'po' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700';
-        return `<tr class="hover:bg-slate-50"><td class="px-6 py-4 font-semibold">${escapeHtml(u.username || '-')}</td><td class="px-6 py-4">${escapeHtml(u.full_name || '-')}</td><td class="px-6 py-4"><span class="px-2 py-1 rounded-full text-xs font-bold ${roleClass}">${escapeHtml(u.role || 'staff')}</span></td><td class="px-6 py-4"><span class="px-2 py-1 rounded-full text-xs font-bold ${u.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${u.active ? 'Hoạt động' : 'Đã khóa'}</span></td><td class="px-6 py-4 text-sm text-slate-500">${escapeHtml(formatDateTime(u.created_at))}</td><td class="px-6 py-4 text-right"><div class="flex justify-end gap-2"><button data-id="${id}" data-active="${u.active ? 'true' : 'false'}" onclick="toggleUserStatus(this.dataset.id, this.dataset.active === 'true')" class="px-3 py-1 rounded-lg text-sm ${u.active ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}">${u.active ? 'Khóa' : 'Mở'}</button><button data-id="${id}" onclick="openEditUserModal(this.dataset.id)" class="px-3 py-1 rounded-lg bg-blue-100 text-blue-700 text-sm">Sửa</button><button data-id="${id}" onclick="deleteUser(this.dataset.id)" class="px-3 py-1 rounded-lg bg-red-100 text-red-700 text-sm">Xóa</button></div></td></tr>`;
+        const roleClass = getUserRoleBadgeClass(u.role);
+        return `<tr class="hover:bg-slate-50"><td class="px-6 py-4 font-semibold">${escapeHtml(u.username || '-')}</td><td class="px-6 py-4">${escapeHtml(u.full_name || '-')}</td><td class="px-6 py-4"><span class="px-2 py-1 rounded-full text-xs font-bold ${roleClass}">${escapeHtml(getUserRoleLabel(u.role))}</span></td><td class="px-6 py-4"><span class="px-2 py-1 rounded-full text-xs font-bold ${u.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${u.active ? 'Hoạt động' : 'Đã khóa'}</span></td><td class="px-6 py-4 text-sm text-slate-500">${escapeHtml(formatDateTime(u.created_at))}</td><td class="px-6 py-4 text-right"><div class="flex justify-end gap-2"><button data-id="${id}" data-active="${u.active ? 'true' : 'false'}" onclick="toggleUserStatus(this.dataset.id, this.dataset.active === 'true')" class="px-3 py-1 rounded-lg text-sm ${u.active ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}">${u.active ? 'Khóa' : 'Mở'}</button><button data-id="${id}" onclick="openEditUserModal(this.dataset.id)" class="px-3 py-1 rounded-lg bg-blue-100 text-blue-700 text-sm">Sửa</button><button data-id="${id}" onclick="deleteUser(this.dataset.id)" class="px-3 py-1 rounded-lg bg-red-100 text-red-700 text-sm">Xóa</button></div></td></tr>`;
     }).join('');
     usersMobileList.innerHTML = rows.map(u => {
         const id = escapeHtmlAttr(u.id);
-        const roleClass = u.role === 'admin' ? 'bg-red-100 text-red-700' : u.role === 'po' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700';
-        return `<div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm"><div class="flex items-start justify-between gap-3"><div><div class="font-bold text-slate-800 text-lg">${escapeHtml(u.full_name || '-')}</div><div class="text-sm text-slate-500 mt-1">@${escapeHtml(u.username || '-')}</div></div><span class="px-2 py-1 rounded-full text-xs font-bold ${roleClass}">${escapeHtml(u.role || 'staff')}</span></div><div class="mt-3 grid grid-cols-2 gap-2 text-xs"><div class="bg-slate-50 rounded-xl p-2"><div class="text-slate-400">Trạng thái</div><div class="font-bold ${u.active ? 'text-green-600' : 'text-red-600'}">${u.active ? 'Hoạt động' : 'Đã khóa'}</div></div><div class="bg-slate-50 rounded-xl p-2"><div class="text-slate-400">Ngày tạo</div><div class="font-semibold text-slate-700">${escapeHtml(formatDateTime(u.created_at))}</div></div></div><div class="mt-4 grid grid-cols-3 gap-2"><button data-id="${id}" onclick="openEditUserModal(this.dataset.id)" class="py-2 rounded-xl bg-blue-50 text-blue-700 font-bold text-sm">Sửa</button><button data-id="${id}" data-active="${u.active ? 'true' : 'false'}" onclick="toggleUserStatus(this.dataset.id, this.dataset.active === 'true')" class="py-2 rounded-xl font-bold text-sm ${u.active ? 'bg-yellow-50 text-yellow-700' : 'bg-green-50 text-green-700'}">${u.active ? 'Khóa' : 'Mở'}</button><button data-id="${id}" onclick="deleteUser(this.dataset.id)" class="py-2 rounded-xl bg-red-50 text-red-700 font-bold text-sm">Xóa</button></div></div>`;
+        const roleClass = getUserRoleBadgeClass(u.role);
+        return `<div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm"><div class="flex items-start justify-between gap-3"><div><div class="font-bold text-slate-800 text-lg">${escapeHtml(u.full_name || '-')}</div><div class="text-sm text-slate-500 mt-1">@${escapeHtml(u.username || '-')}</div></div><span class="px-2 py-1 rounded-full text-xs font-bold ${roleClass}">${escapeHtml(getUserRoleLabel(u.role))}</span></div><div class="mt-3 grid grid-cols-2 gap-2 text-xs"><div class="bg-slate-50 rounded-xl p-2"><div class="text-slate-400">Trạng thái</div><div class="font-bold ${u.active ? 'text-green-600' : 'text-red-600'}">${u.active ? 'Hoạt động' : 'Đã khóa'}</div></div><div class="bg-slate-50 rounded-xl p-2"><div class="text-slate-400">Ngày tạo</div><div class="font-semibold text-slate-700">${escapeHtml(formatDateTime(u.created_at))}</div></div></div><div class="mt-4 grid grid-cols-3 gap-2"><button data-id="${id}" onclick="openEditUserModal(this.dataset.id)" class="py-2 rounded-xl bg-blue-50 text-blue-700 font-bold text-sm">Sửa</button><button data-id="${id}" data-active="${u.active ? 'true' : 'false'}" onclick="toggleUserStatus(this.dataset.id, this.dataset.active === 'true')" class="py-2 rounded-xl font-bold text-sm ${u.active ? 'bg-yellow-50 text-yellow-700' : 'bg-green-50 text-green-700'}">${u.active ? 'Khóa' : 'Mở'}</button><button data-id="${id}" onclick="deleteUser(this.dataset.id)" class="py-2 rounded-xl bg-red-50 text-red-700 font-bold text-sm">Xóa</button></div></div>`;
     }).join('');
 }
 
